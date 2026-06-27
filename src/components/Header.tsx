@@ -49,10 +49,7 @@ export default function Header({
             <FileText size={20} className="stroke-[2.5]" />
           </div>
           <span className="font-sans font-bold text-lg tracking-tight text-gray-900 dark:text-white">
-            Docu<span className="text-indigo-600 dark:text-indigo-400">Craft</span>
-          </span>
-          <span className="text-[10px] font-mono py-0.5 px-1.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
-            SaaS
+            Docu<span className="text-indigo-600 dark:text-indigo-400">lux</span>
           </span>
         </div>
 

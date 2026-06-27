@@ -284,7 +284,7 @@ export default function App() {
 
   // FAQ list for landing & pricing pages
   const faqs = [
-    { q: 'Is my data secure on DocuCraft?', a: 'Yes! Unlike other services, DocuCraft operates 100% in-browser using advanced client-side libraries. Your files are NEVER uploaded to third-party databases or remote clouds — keeping your documents private and fully encrypted on your local computer.' },
+    { q: 'Is my data secure on Doculux?', a: 'Yes! Unlike other services, Doculux operates 100% in-browser using advanced client-side libraries. Your files are NEVER uploaded to third-party databases or remote clouds — keeping your documents private and fully encrypted on your local computer.' },
     { q: 'What are the file limits on the free tier?', a: 'Free tier members get up to 3 actions per tool per day with a file limit of 25MB and up to 10 files per batch upload. Pro members enjoy up to 200MB file limits and unlimited daily actions.' },
     { q: 'How does the Referral program work?', a: 'Every person who signs up using your unique referral code grants BOTH you and them +1 extra daily action limit permanently! You can earn up to 10 extra actions daily.' },
     { q: 'Can I cancel my Pro subscription at any time?', a: 'Absolutely! You can manage and cancel your subscriptions seamlessly using our self-serve Stripe Billing portal. There are no locking contracts or penalties.' },
@@ -653,12 +653,12 @@ export default function App() {
 
                       <div className="mt-8 pt-8 border-t border-gray-50 dark:border-gray-900/50 space-y-3">
                         <h4 className="font-sans font-extrabold text-sm text-red-600">Danger Zone</h4>
-                        <p className="text-xs text-gray-400">Permanently delete your DocuCraft account, files logs, and passwords. This cannot be undone.</p>
+                        <p className="text-xs text-gray-400">Permanently delete your Doculux account, files logs, and passwords. This cannot be undone.</p>
                         <button
                           onClick={handleDeleteAccount}
                           className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl text-xs transition-colors"
                         >
-                          Delete DocuCraft Account
+                          Delete Doculux Account
                         </button>
                       </div>
                     </div>
@@ -718,7 +718,7 @@ export default function App() {
                             Apply
                           </button>
                         </form>
-                        <p className="text-xs text-gray-400">Have a friend’s code? Apply it above and BOTH of you will instantly unlock +1 daily actions on DocuCraft permanently!</p>
+                        <p className="text-xs text-gray-400">Have a friend’s code? Apply it above and BOTH of you will instantly unlock +1 daily actions on Doculux permanently!</p>
                       </div>
                     </div>
                   </div>
@@ -1014,7 +1014,7 @@ export default function App() {
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Platform Support Contact</label>
                         <input
                           type="text"
-                          defaultValue="support@docucraft.app"
+                          defaultValue="support@doculux.com"
                           className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         />
                       </div>
@@ -1022,7 +1022,7 @@ export default function App() {
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Announcement Banner Text</label>
                         <input
                           type="text"
-                          defaultValue="🎉 Welcome to DocuCraft SaaS v4. Now running fully client-side!"
+                          defaultValue="🎉 Welcome to Doculux v4. Now running fully client-side!"
                           className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         />
                       </div>
@@ -1219,7 +1219,7 @@ export default function App() {
             
             {/* Announcement Banner */}
             <div className="bg-indigo-600 text-white text-center py-2 px-4 text-xs font-semibold select-none">
-              🚀 Announcement: DocuCraft v4 is now 100% serverless client-side secured. Your documents never leave your browser!
+              🚀 Announcement: Doculux v4 is now 100% serverless client-side secured. Your documents never leave your browser!
             </div>
 
             {/* Hero area */}
@@ -1233,7 +1233,7 @@ export default function App() {
                   The Premium, Secured <span className="text-indigo-600 dark:text-indigo-400">PDF & Image</span> Suite
                 </h1>
                 <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-lg mx-auto">
-                  DocuCraft runs fast rendering directly in your browser. No slow cloud uploads, no privacy threats — just robust, instant document modifications.
+                  Doculux runs fast rendering directly in your browser. No slow cloud uploads, no privacy threats — just robust, instant document modifications.
                 </p>
               </div>
 
@@ -1435,7 +1435,7 @@ export default function App() {
               <FileText size={14} />
             </div>
             <span className="font-sans font-bold text-sm tracking-tight text-gray-900 dark:text-white">
-              DocuCraft SaaS
+              Doculux
             </span>
           </div>
 
@@ -1446,11 +1446,11 @@ export default function App() {
             <span>•</span>
             <button onClick={() => handleNavigate('pricing')} className="hover:text-indigo-600">Pricing Tiers</button>
             <span>•</span>
-            <a href="mailto:support@docucraft.app" className="hover:text-indigo-600">Contact Support</a>
+            <a href="mailto:support@doculux.com" className="hover:text-indigo-600">Contact Support</a>
           </div>
 
           <p className="text-[10px] text-gray-400 font-mono">
-            © 2026 DocuCraft, Inc. • SSL Encrypted Browser Sandbox
+            © 2026 Doculux, Inc. • SSL Encrypted Browser Sandbox
           </p>
         </div>
       </footer>

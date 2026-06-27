@@ -69,7 +69,7 @@ export default function UpgradeModal({
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 mb-3 uppercase tracking-widest select-none">
             <Sparkles size={12} className="animate-pulse" />
-            DocuCraft Premium
+            Doculux Premium
           </div>
           <h3 className="font-sans font-extrabold text-2xl text-gray-900 dark:text-white sm:text-3xl">
             Supercharge Your Productivity
@@ -196,7 +196,7 @@ export default function UpgradeModal({
                 </li>
                 <li className="flex items-start gap-2">
                   <Check size={14} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
-                  <span>Global SaaS Developer API Access</span>
+                  <span>Global Developer API Access</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check size={14} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />

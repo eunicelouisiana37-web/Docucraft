@@ -164,7 +164,7 @@ export default function AuthModal({
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {tab === 'login' && 'Log in to process and manage your files.'}
-            {tab === 'register' && 'Join over 10,000+ professionals using DocuCraft.'}
+            {tab === 'register' && 'Join over 10,000+ professionals using Doculux.'}
             {tab === 'forgot' && "Enter your email and we'll send a recovery link."}
           </p>
         </div>

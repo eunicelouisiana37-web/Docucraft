@@ -386,7 +386,7 @@ export default function ToolPageLayout({
           // Build final document with either high-fidelity layout or structured rendering fallback
           const docChildren = [
             new Paragraph({
-              text: "DocuCraft Layout Conversion Report",
+              text: "Doculux Layout Conversion Report",
               heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER,
             }),
@@ -415,7 +415,7 @@ export default function ToolPageLayout({
             new Paragraph({
               children: [
                 new TextRun({ text: "Conversion Engine: ", bold: true }),
-                new TextRun({ text: "DocuCraft Flow Engine v4 (Layout Preserving)" }),
+                new TextRun({ text: "Doculux Flow Engine v4 (Layout Preserving)" }),
               ],
             }),
             new Paragraph({
@@ -456,13 +456,13 @@ export default function ToolPageLayout({
               new Paragraph({ text: "" }),
               new Paragraph({
                 children: [
-                  new TextRun("Notice: This PDF document has an inaccessible text layer, possibly because it's a scanned page, image-based, or has a complex encrypted layout. DocuCraft activated its fallback layout constructor to prevent garbled outputs or errors. This fallback guarantees a perfectly readable Word document."),
+                  new TextRun("Notice: This PDF document has an inaccessible text layer, possibly because it's a scanned page, image-based, or has a complex encrypted layout. Doculux activated its fallback layout constructor to prevent garbled outputs or errors. This fallback guarantees a perfectly readable Word document."),
                 ],
               }),
               new Paragraph({ text: "" }),
               new Paragraph({
                 children: [
-                  new TextRun("If this is a scanned PDF, we recommend using DocuCraft Pro OCR engine, which uses deep learning models to perform high-resolution optical character recognition on each page canvas directly inside our secure sandbox environment."),
+                  new TextRun("If this is a scanned PDF, we recommend using Doculux Pro OCR engine, which uses deep learning models to perform high-resolution optical character recognition on each page canvas directly inside our secure sandbox environment."),
                 ],
               })
             );
@@ -497,7 +497,7 @@ export default function ToolPageLayout({
             new Paragraph({ text: "" }),
             new Paragraph({
               children: [
-                new TextRun("Thank you for choosing DocuCraft!"),
+                new TextRun("Thank you for choosing Doculux!"),
               ],
             })
           );
@@ -519,7 +519,7 @@ export default function ToolPageLayout({
           // Generate simulated Word to PDF
           const pdfDoc = await PDFDocument.create();
           const page = pdfDoc.addPage([595.28, 841.89]);
-          page.drawText('DocuCraft Converted Document', { x: 50, y: 800, size: 20 });
+          page.drawText('Doculux Converted Document', { x: 50, y: 800, size: 20 });
           page.drawText(`Source Document: ${files[0].name}`, { x: 50, y: 760, size: 12 });
           page.drawText('Converted cleanly from Microsoft Word (.docx) to Web-Optimized PDF.', { x: 50, y: 730, size: 10 });
           const pdfBytes = await pdfDoc.save();
@@ -958,7 +958,7 @@ export default function ToolPageLayout({
 
                 {tool.slug === 'pdf-to-word' && (
                   <p className="text-xs text-gray-400">
-                    DocuCraft will preserve original fonts, layout columns, lists, tables, and spacing in editable Word form.
+                    Doculux will preserve original fonts, layout columns, lists, tables, and spacing in editable Word form.
                   </p>
                 )}
 

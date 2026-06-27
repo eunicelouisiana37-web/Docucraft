@@ -1,6 +1,6 @@
 {
-  "name": "PDF & Image Tools Platform",
-  "description": "A browser-based SaaS platform for fast and premium PDF and image processing tools with built-in subscription management, user dashboard, and admin controls.",
+  "name": "Doculux",
+  "description": "A browser-based platform for fast and premium PDF and image processing tools with built-in subscription management, user dashboard, and admin controls.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
