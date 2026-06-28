@@ -199,7 +199,9 @@ const DEFAULT_USERS: User[] = [
     role: 'admin',
     plan: 'business',
     referralCode: 'ADMIN50',
-    referralsCount: 42
+    referralsCount: 42,
+    credits: 1000,
+    lifetimeReferralCredits: 840
   },
   {
     id: 'usr_premium',
@@ -209,7 +211,9 @@ const DEFAULT_USERS: User[] = [
     plan: 'pro',
     currentPeriodEnd: new Date(Date.now() + 24 * 60 * 60 * 1000 * 25).toISOString(),
     referralCode: 'ALEX101',
-    referralsCount: 3
+    referralsCount: 3,
+    credits: 500,
+    lifetimeReferralCredits: 60
   },
   {
     id: 'usr_free',
@@ -218,7 +222,9 @@ const DEFAULT_USERS: User[] = [
     role: 'user',
     plan: 'free',
     referralCode: 'EUNICE22',
-    referralsCount: 0
+    referralsCount: 0,
+    credits: 10,
+    lifetimeReferralCredits: 0
   }
 ];
 
@@ -283,7 +289,25 @@ export class AppStore {
 
   static getUsers(): User[] {
     this.init();
-    return this.getLocalStorage<User[]>('pdf_users', DEFAULT_USERS);
+    const users = this.getLocalStorage<User[]>('pdf_users', DEFAULT_USERS);
+    let dirty = false;
+    const sanitized = users.map(u => {
+      let updated = false;
+      if (u.credits === undefined || typeof u.credits !== 'number') {
+        u.credits = u.plan === 'business' ? 1000 : u.plan === 'pro' ? 500 : 10;
+        updated = true;
+      }
+      if (u.lifetimeReferralCredits === undefined || typeof u.lifetimeReferralCredits !== 'number') {
+        u.lifetimeReferralCredits = u.referralsCount * 20;
+        updated = true;
+      }
+      if (updated) dirty = true;
+      return u;
+    });
+    if (dirty) {
+      this.setLocalStorage('pdf_users', sanitized);
+    }
+    return sanitized;
   }
 
   static getTools(): Tool[] {
@@ -334,6 +358,9 @@ export class AppStore {
       throw new Error('Email already registered');
     }
 
+    const referrerId = localStorage.getItem('doculux_referrer_id');
+    let startingCredits = 10; // Standard signup bonus
+
     const newUser: User = {
       id: 'usr_' + Math.random().toString(36).substring(2, 9),
       name,
@@ -341,8 +368,30 @@ export class AppStore {
       role: 'user',
       plan: 'free',
       referralCode: name.toUpperCase().replace(/\s+/g, '') + Math.floor(Math.random() * 900 + 100),
-      referralsCount: 0
+      referralsCount: 0,
+      credits: startingCredits,
+      lifetimeReferralCredits: 0
     };
+
+    if (referrerId) {
+      // Find the referrer by ID or referralCode
+      const referrer = users.find(u => u.id === referrerId || u.referralCode === referrerId);
+      if (referrer) {
+        // Friend earns 15 bonus credits (10 + 15 = 25 total)
+        newUser.credits = startingCredits + 15;
+        
+        // Referrer earns 20 credits
+        referrer.credits = (referrer.credits || 0) + 20;
+        referrer.referralsCount = (referrer.referralsCount || 0) + 1;
+        referrer.lifetimeReferralCredits = (referrer.lifetimeReferralCredits || 0) + 20;
+        
+        // Save refer relationship for future first-purchase bonus
+        const uWithRefs = referrer as any;
+        uWithRefs.referredUsers = uWithRefs.referredUsers || [];
+        uWithRefs.referredUsers.push({ id: newUser.id, purchased: false });
+      }
+      localStorage.removeItem('doculux_referrer_id');
+    }
 
     users.push(newUser);
     credentials[email] = password;
@@ -461,12 +510,32 @@ export class AppStore {
 
   // Stripe & Billing Simulation
   static handleCheckoutSimulation(userId: string, plan: SubscriptionPlan): User {
-    const user = this.updateProfile(userId, {
-      plan,
-      stripeSubscriptionId: 'sub_' + Math.random().toString(36).substring(2, 10),
-      stripeCustomerId: 'cus_' + Math.random().toString(36).substring(2, 10),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const users = this.getUsers();
+    
+    // Check if the user making a purchase was referred by someone
+    users.forEach(u => {
+      const uWithRefs = u as any;
+      if (uWithRefs.referredUsers && Array.isArray(uWithRefs.referredUsers)) {
+        const found = uWithRefs.referredUsers.find((r: any) => r.id === userId && !r.purchased);
+        if (found) {
+          found.purchased = true;
+          u.credits = (u.credits || 0) + 30;
+          u.lifetimeReferralCredits = (u.lifetimeReferralCredits || 0) + 30;
+        }
+      }
     });
+
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      const extraCredits = plan === 'business' ? 500 : 100;
+      users[idx].plan = plan;
+      users[idx].credits = (users[idx].credits || 0) + extraCredits;
+      users[idx].stripeSubscriptionId = 'sub_' + Math.random().toString(36).substring(2, 10);
+      users[idx].stripeCustomerId = 'cus_' + Math.random().toString(36).substring(2, 10);
+      users[idx].currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
+    
+    this.setLocalStorage('pdf_users', users);
 
     // Log the transaction invoice
     const invoices = this.getInvoices();
@@ -481,7 +550,8 @@ export class AppStore {
     });
     this.setLocalStorage('pdf_invoices', invoices);
 
-    return user;
+    const updatedUser = users.find(u => u.id === userId);
+    return updatedUser || users[idx];
   }
 
   static cancelSubscription(userId: string): User {

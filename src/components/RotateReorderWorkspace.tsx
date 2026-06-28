@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { showToast } from '../utils/toast';
 import { 
   RotateCw, RotateCcw, Trash2, Download, Check, X, ShieldAlert, FileText, ArrowLeft, Loader2
 } from 'lucide-react';
@@ -142,7 +143,7 @@ export default function RotateReorderWorkspace({
     
     const remainingCount = pages.length - selectedIds.size;
     if (remainingCount < 1) {
-      alert('You must keep at least 1 page in the PDF.');
+      showToast('You must keep at least 1 page in the PDF.', 'error');
       return;
     }
 
@@ -241,7 +242,7 @@ export default function RotateReorderWorkspace({
     } catch (err) {
       console.error('Failed to create new PDF', err);
       setIsSaving(false);
-      alert('Failed to process and compile the PDF file.');
+      showToast('Failed to process and compile the PDF file.', 'error');
     }
   };
 

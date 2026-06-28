@@ -40,6 +40,7 @@ interface ToolPageLayoutProps {
   onProcessSuccess: () => void;
   initialFile?: File | null;
   onClearInitialFile?: () => void;
+  onUserUpdate?: () => void;
 }
 
 export default function ToolPageLayout({
@@ -50,7 +51,8 @@ export default function ToolPageLayout({
   onNavigate,
   onProcessSuccess,
   initialFile,
-  onClearInitialFile
+  onClearInitialFile,
+  onUserUpdate
 }: ToolPageLayoutProps) {
   const [files, setFiles] = useState<File[]>(() => {
     return initialFile ? [initialFile] : [];
@@ -599,7 +601,11 @@ export default function ToolPageLayout({
   if (tool.slug === 'ai-chat') {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8" id="tool-page-ai-chat">
-        <AiChatWorkspace onClose={() => onNavigate('')} />
+        <AiChatWorkspace 
+          onClose={() => onNavigate('')} 
+          currentUser={currentUser} 
+          onUserUpdate={onUserUpdate} 
+        />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { showToast } from '../utils/toast';
 import { 
   Binary, ArrowLeft, Loader2, Download, Settings, Sliders, Layout, Eye
 } from 'lucide-react';
@@ -201,7 +202,7 @@ export default function PageNumbersWorkspace({
     } catch (err) {
       console.error('Failed to add page numbers to PDF', err);
       setIsProcessing(false);
-      alert('Failed to stamp page numbers. Please try again with a valid file.');
+      showToast('Failed to stamp page numbers. Please try again with a valid file.', 'error');
     }
   };
 

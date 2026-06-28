@@ -2,9 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Upload, FileText, Send, Copy, Check, Sparkles, Loader2, ArrowLeft, ArrowRight
 } from 'lucide-react';
+import { User } from '../types';
+import { AppStore } from '../lib/store';
 
 interface AiChatWorkspaceProps {
   onClose?: () => void;
+  currentUser: User | null;
+  onUserUpdate?: () => void;
 }
 
 const loadPdfJS = (): Promise<any> => {
@@ -66,7 +70,7 @@ const TypewriterMessage = ({ text, isNew }: { text: string; isNew: boolean }) =>
   return <span className="whitespace-pre-wrap">{displayedText}</span>;
 };
 
-export default function AiChatWorkspace({ onClose }: AiChatWorkspaceProps) {
+export default function AiChatWorkspace({ onClose, currentUser, onUserUpdate }: AiChatWorkspaceProps) {
   // Navigation back to tool dashboard
   const handleBack = () => {
     if (onClose) onClose();
@@ -335,6 +339,22 @@ export default function AiChatWorkspace({ onClose }: AiChatWorkspaceProps) {
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || isSending) return;
 
+    if (!currentUser) {
+      setError('Please sign in or register to use AI Chat PDF.');
+      return;
+    }
+
+    if (currentUser.plan === 'free' && (currentUser.credits || 0) < 1) {
+      const errorMessage: Message = {
+        id: Math.random().toString(),
+        sender: 'ai',
+        text: '⚠️ You have run out of credits. Please claim your free Daily Gift on the dashboard, refer friends (+20 credits), or upgrade your plan to get more credits!',
+        isNew: true
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage: Message = {
       id: Math.random().toString(),
       sender: 'user',
@@ -364,6 +384,14 @@ export default function AiChatWorkspace({ onClose }: AiChatWorkspaceProps) {
       const data = await chatRes.json();
       if (!chatRes.ok) {
         throw new Error(data.error || 'Failed to get chat response');
+      }
+
+      // Deduct 1 credit for successful AI query for free plan
+      if (currentUser.plan === 'free') {
+        const updated = AppStore.consumeCredits(currentUser.id, 1);
+        if (updated.success && updated.user) {
+          onUserUpdate?.();
+        }
       }
       
       const aiMessage: Message = {
@@ -870,6 +898,23 @@ export default function AiChatWorkspace({ onClose }: AiChatWorkspaceProps) {
               <p className="doc-filename" id="docFilename" title={file.name}>{file.name}</p>
               <p className="doc-pagecount" id="docPageCount">{totalPages} {totalPages === 1 ? 'page' : 'pages'}</p>
             </div>
+
+            {/* Credit Balance & Query Cost display for sidebar */}
+            <div className="px-5 py-3.5 mx-4 mt-2 mb-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-left space-y-1.5 font-sans">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-indigo-400 uppercase tracking-widest">
+                  <span>⚡ Balance</span>
+                </div>
+                <span className="text-xs font-mono font-extrabold text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-full">
+                  {currentUser?.plan === 'business' ? 'Unlimited' : `${currentUser?.credits ?? 10} left`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span>Cost per query</span>
+                <span className="font-mono text-indigo-300 font-bold">1 credit</span>
+              </div>
+            </div>
+
             <div className="doc-summary-section">
               <div className="doc-summary-label">
                 <span className="summary-icon">✦</span>
@@ -900,7 +945,7 @@ export default function AiChatWorkspace({ onClose }: AiChatWorkspaceProps) {
                   {file.name}
                 </p>
                 <p className="text-[10px] text-gray-400">
-                  {totalPages} pages
+                  {totalPages} pages · <span className="text-indigo-400 font-mono font-bold">{currentUser?.plan === 'business' ? 'Unlimited' : `${currentUser?.credits ?? 10} credits`}</span>
                 </p>
               </div>
             </div>

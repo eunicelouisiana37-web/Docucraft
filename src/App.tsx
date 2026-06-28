@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { User, Tool, FileRecord, UsageLog, Invoice, SubscriptionPlan } from './types';
+import { ToastMessage, ToastType, showToast } from './utils/toast';
 import { AppStore } from './lib/store';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import AuthModal from './components/AuthModal';
 import UpgradeModal from './components/UpgradeModal';
+import OnboardingModal from './components/OnboardingModal';
 import ToolPageLayout from './components/ToolPageLayout';
 import BatchProcessor from './components/BatchProcessor';
 import { 
@@ -67,6 +69,15 @@ export default function App() {
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeInitialPlan, setUpgradeInitialPlan] = useState<SubscriptionPlan>('pro');
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDataLoading(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Theme support
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -92,11 +103,47 @@ export default function App() {
   const [settingsPassword, setSettingsPassword] = useState('');
   const [settingsReferralCode, setSettingsReferralCode] = useState('');
 
+  // Scroll to Top state & effect
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Toasts state & custom event listener
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  useEffect(() => {
+    const handleNewToast = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string; type: ToastType }>;
+      const { message, type } = customEvent.detail;
+      const id = Math.random().toString(36).substring(2, 9);
+      const newToast: ToastMessage = { id, message, type };
+      
+      setToasts((prev) => [...prev, newToast]);
+      
+      // Automatically remove toast after 3 seconds
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 3000);
+    };
+
+    window.addEventListener('doculux-toast', handleNewToast);
+    return () => window.removeEventListener('doculux-toast', handleNewToast);
+  }, []);
+
   // Landing Page Demo State
   const [landingFile, setLandingFile] = useState<File | null>(null);
   const [landingProgress, setLandingProgress] = useState(0);
   const [landingProcessing, setLandingProcessing] = useState(false);
   const [landingResultReady, setLandingResultReady] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   // Load state and listen to Hash changes
   useEffect(() => {
@@ -105,6 +152,16 @@ export default function App() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+
+    // Check for referral link code in URL query params
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      localStorage.setItem('doculux_referrer_id', refCode);
+      // Clean query params from URL
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.hash;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
     }
 
     // Initialize store & state lists
@@ -144,6 +201,13 @@ export default function App() {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, [theme]);
+
+  // Trigger onboarding modal for first-time logged in users
+  useEffect(() => {
+    if (currentUser && !localStorage.getItem('doculux_onboarded')) {
+      setOnboardingOpen(true);
+    }
+  }, [currentUser]);
 
   const handleToggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -230,9 +294,9 @@ export default function App() {
         spread: 40,
         origin: { y: 0.8 }
       });
-      alert(`Success! Referral applied. You and ${referrer.name} both unlocked +1 extra free tool use per day!`);
+      showToast(`Success! Referral applied. You and ${referrer.name} both unlocked +1 extra free tool use per day!`, 'success');
     } else {
-      alert('Invalid or expired referral code. Please check and try again.');
+      showToast('Invalid or expired referral code. Please check and try again.', 'error');
     }
   };
 
@@ -251,9 +315,9 @@ export default function App() {
       }
       setCurrentUser(updated);
       setAllUsers(AppStore.getUsers());
-      alert('Profile settings saved successfully!');
+      showToast('Profile settings saved successfully!', 'success');
     } catch (err: any) {
-      alert(err.message || 'Error saving settings');
+      showToast(err.message || 'Error saving settings', 'error');
     }
   };
 
@@ -505,56 +569,76 @@ export default function App() {
 
                     {/* Usage Progress Cards */}
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {allTools.map((t) => {
-                        const usage = AppStore.getDailyUsageCount(currentUser.id, t.slug);
-                        const limit = t.freeLimit + currentUser.referralsCount;
-                        const isFree = currentUser.plan === 'free';
-                        const atLimit = isFree && usage >= limit;
-                        const percent = !isFree ? 0 : Math.min(100, (usage / limit) * 100);
-
-                        return (
-                          <div key={t.slug} className="usage-card">
-                            <div className="usage-tool-name">{t.name}</div>
-                            <div className="usage-bar-wrapper">
-                              <div 
-                                className="usage-bar-fill" 
-                                style={{ 
-                                  width: `${percent}%`,
-                                  backgroundColor: atLimit ? 'var(--color-warning)' : 'var(--color-primary)'
-                                }}
-                              ></div>
-                            </div>
-                            <div className="usage-counter">
-                              {atLimit ? (
-                                <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
-                                  Limit reached · Upgrade for unlimited
-                                </span>
-                              ) : !isFree ? (
-                                `${usage} / Unlimited today`
-                              ) : (
-                                `${usage} / ${limit} today`
-                              )}
-                            </div>
+                      {dataLoading ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="usage-card skeleton" style={{ minHeight: '84px', border: 'none' }}>
+                            <div className="h-4 bg-gray-200/20 dark:bg-gray-800/20 rounded w-2/3 mb-3"></div>
+                            <div className="h-2 bg-gray-200/20 dark:bg-gray-800/20 rounded mb-2"></div>
+                            <div className="h-3 bg-gray-200/20 dark:bg-gray-800/20 rounded w-1/3"></div>
                           </div>
-                        );
-                      })}
+                        ))
+                      ) : (
+                        allTools.map((t) => {
+                          const usage = AppStore.getDailyUsageCount(currentUser.id, t.slug);
+                          const limit = t.freeLimit + currentUser.referralsCount;
+                          const isFree = currentUser.plan === 'free';
+                          const atLimit = isFree && usage >= limit;
+                          const percent = !isFree ? 0 : Math.min(100, (usage / limit) * 100);
+
+                          return (
+                            <div key={t.slug} className="usage-card">
+                              <div className="usage-tool-name">{t.name}</div>
+                              <div className="usage-bar-wrapper">
+                                <div 
+                                  className="usage-bar-fill" 
+                                  style={{ 
+                                    width: `${percent}%`,
+                                    backgroundColor: atLimit ? 'var(--color-warning)' : 'var(--color-primary)'
+                                  }}
+                                ></div>
+                              </div>
+                              <div className="usage-counter">
+                                {atLimit ? (
+                                  <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+                                    Limit reached · Upgrade for unlimited
+                                  </span>
+                                ) : !isFree ? (
+                                  `${usage} / Unlimited today`
+                                ) : (
+                                  `${usage} / ${limit} today`
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Quick Access Grid */}
                     <div className="space-y-3">
                       <h3 className="font-sans font-extrabold text-lg text-gray-900 dark:text-white">Quick-Access Tools</h3>
                       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {allTools.map((t) => (
-                          <div 
-                            key={t.slug}
-                            onClick={() => handleNavigate(`tools/${t.slug}`)}
-                            className="p-5 rounded-2xl glass-card glass-card-hover cursor-pointer group"
-                          >
-                            <span className="text-xs font-bold font-mono text-indigo-600 dark:text-indigo-400 mb-2.5 block">{t.category}</span>
-                            <h4 className="font-sans font-bold text-gray-950 dark:text-white group-hover:text-indigo-600 transition-colors">{t.name}</h4>
-                            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{t.description}</p>
-                          </div>
-                        ))}
+                        {dataLoading ? (
+                          Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="p-5 rounded-2xl glass-card skeleton" style={{ minHeight: '104px', border: 'none' }}>
+                              <div className="h-3 bg-gray-200/20 dark:bg-gray-800/20 rounded w-1/4 mb-3"></div>
+                              <div className="h-4 bg-gray-200/20 dark:bg-gray-800/20 rounded w-2/3 mb-2"></div>
+                              <div className="h-3 bg-gray-200/20 dark:bg-gray-800/20 rounded w-3/4"></div>
+                            </div>
+                          ))
+                        ) : (
+                          allTools.map((t) => (
+                            <div 
+                              key={t.slug}
+                              onClick={() => handleNavigate(`tools/${t.slug}`)}
+                              className="p-5 rounded-2xl glass-card glass-card-hover cursor-pointer group"
+                            >
+                              <span className="text-xs font-bold font-mono text-indigo-600 dark:text-indigo-400 mb-2.5 block">{t.category}</span>
+                              <h4 className="font-sans font-bold text-gray-950 dark:text-white group-hover:text-indigo-600 transition-colors">{t.name}</h4>
+                              <p className="text-xs text-gray-400 mt-1 line-clamp-2">{t.description}</p>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
@@ -815,59 +899,147 @@ export default function App() {
 
                 {/* Dashboard View: Referrals */}
                 {activeDashboardView === 'referrals' && (
-                  <div className="space-y-6 animate-fade-in" id="dashboard-referrals-panel">
-                    <h2 className="font-sans font-extrabold text-2xl text-gray-900 dark:text-white">Referrals</h2>
+                  <div className="referrals-page space-y-6 animate-fade-in" id="dashboard-referrals-panel">
+                    <div className="referral-hero-card">
+                      <div className="referral-hero-header">
+                        <div className="referral-hero-icon">🎁</div>
+                        <div>
+                          <h2 className="text-left">Invite Friends, Earn Free Credits</h2>
+                          <p className="text-left text-sm text-gray-300">You earn <strong>20 credits</strong> for every friend who signs up. Your friend gets <strong>15 bonus credits</strong> on top of their 10 free credits.</p>
+                        </div>
+                      </div>
 
-                    <div className="grid sm:grid-cols-2 gap-6">
-                      {/* Refer & Earn Panel */}
-                      <div className="glass-card p-6 rounded-3xl space-y-4">
-                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">Invite Code</span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={`https://docucraft.app?ref=${currentUser.referralCode}`}
-                            className="flex-1 px-4 py-2.5 bg-gray-50/50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 text-xs font-mono rounded-xl border border-gray-100 dark:border-gray-900/40 select-all"
+                      <div className="referral-reward-breakdown">
+                        <div className="reward-step">
+                          <div className="reward-step-icon">👥</div>
+                          <div className="reward-step-text">
+                            <strong>Friend signs up</strong>
+                            <span>You get +20 credits · Friend gets +15 bonus credits</span>
+                          </div>
+                          <div className="reward-step-credits">⚡ +20</div>
+                        </div>
+                        <div className="reward-step">
+                          <div className="reward-step-icon">💳</div>
+                          <div className="reward-step-text">
+                            <strong>Friend makes first purchase</strong>
+                            <span>You earn an extra +30 credits</span>
+                          </div>
+                          <div className="reward-step-credits">⚡ +30</div>
+                        </div>
+                      </div>
+
+                      <div className="referral-link-box">
+                        <span className="referral-label">Your referral link</span>
+                        <div className="referral-input-row">
+                          <input 
+                            type="text" 
+                            className="referral-input" 
+                            id="referralLink" 
+                            readOnly 
+                            value={`https://doculux.netlify.app/?ref=${currentUser.id || 'USER_ID'}`}
                           />
-                          <button
+                          <button 
+                            className="referral-copy-btn" 
+                            id="referralCopyBtn" 
                             onClick={() => {
-                              navigator.clipboard.writeText(`https://docucraft.app?ref=${currentUser.referralCode}`);
-                              alert('Referral link copied to clipboard!');
+                              navigator.clipboard.writeText(`https://doculux.netlify.app/?ref=${currentUser.id || 'USER_ID'}`);
+                              setReferralCopied(true);
+                              setTimeout(() => setReferralCopied(false), 2000);
                             }}
-                            className="p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-sm transition-colors"
-                            title="Copy Code Link"
                           >
-                            <Copy size={14} />
+                            {referralCopied ? '✓ Copied!' : '📋 Copy'}
                           </button>
-                        </div>
-                        <div className="text-xs text-gray-400 space-y-1">
-                          <p>• Share your custom invite link with colleagues.</p>
-                          <p>• Your referral count is currently: <strong>{currentUser.referralsCount} users</strong>.</p>
-                          <p>• Your permanent daily limit bonus: <strong>+{currentUser.referralsCount} actions/day</strong>!</p>
                         </div>
                       </div>
 
-                      {/* Apply Friend's Referral Code */}
-                      <div className="glass-card p-6 rounded-3xl space-y-4">
-                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block">Apply Referral</span>
-                        <form onSubmit={handleApplyReferral} className="flex gap-2">
-                          <input
-                            type="text"
-                            required
-                            placeholder="Enter Code (e.g. ALEX101)"
-                            value={settingsReferralCode}
-                            onChange={(e) => setSettingsReferralCode(e.target.value)}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                          <button
-                            type="submit"
-                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all"
-                          >
-                            Apply
-                          </button>
-                        </form>
-                        <p className="text-xs text-gray-400">Have a friend’s code? Apply it above and BOTH of you will instantly unlock +1 daily actions on Doculux permanently!</p>
+                      <div className="referral-share-row">
+                        <span className="share-label">Share via:</span>
+                        <button 
+                          className="share-btn share-btn--whatsapp" 
+                          onClick={() => {
+                            const link = `https://doculux.netlify.app/?ref=${currentUser.id || 'USER_ID'}`;
+                            const msg = encodeURIComponent(`I've been using Doculux for PDF editing — it runs entirely in your browser and gives you 25 credits on sign up! Try it here: ${link}`);
+                            window.open(`https://wa.me/?text=${msg}`, '_blank');
+                          }}
+                        >
+                          WhatsApp
+                        </button>
+                        <button 
+                          className="share-btn share-btn--twitter" 
+                          onClick={() => {
+                            const link = `https://doculux.netlify.app/?ref=${currentUser.id || 'USER_ID'}`;
+                            const msg = encodeURIComponent(`Just found Doculux — a free PDF suite. No installs, no uploads. Sign up via my link to get 25 free credits: ${link} #productivity #PDF`);
+                            window.open(`https://twitter.com/intent/tweet?text=${msg}`, '_blank');
+                          }}
+                        >
+                          X / Twitter
+                        </button>
+                        <button 
+                          className="share-btn share-btn--email" 
+                          onClick={() => {
+                            const link = `https://doculux.netlify.app/?ref=${currentUser.id || 'USER_ID'}`;
+                            window.location.href = `mailto:?subject=Try Doculux — Free PDF Tools&body=Hey, I've been using Doculux for editing PDFs and it's great. Sign up using my link to get 25 free credits: ${link}`;
+                          }}
+                        >
+                          Email
+                        </button>
                       </div>
+                    </div>
+
+                    <div className="referral-stats-row">
+                      <div className="referral-stat-card">
+                        <div className="stat-number" id="refCount">{currentUser.referralsCount || 0}</div>
+                        <div className="stat-label">Friends Referred</div>
+                      </div>
+                      <div className="referral-stat-card">
+                        <div className="stat-number" id="refCreditsEarned" style={{ color: 'var(--color-accent)' }}>
+                          {currentUser.lifetimeReferralCredits || 0}
+                        </div>
+                        <div className="stat-label">Credits Earned</div>
+                      </div>
+                      <div className="referral-stat-card">
+                        <div className="stat-number" id="refPending">0</div>
+                        <div className="stat-label">Pending Signups</div>
+                      </div>
+                    </div>
+
+                    <div className="referral-how-it-works">
+                      <h3>How It Works</h3>
+                      <div className="referral-steps">
+                        <div className="ref-step">
+                          <span className="ref-step-num">1</span>
+                          <div className="text-left">
+                            <strong className="text-gray-900 dark:text-white block font-sans">Share your unique link</strong>
+                            <p className="text-xs text-gray-400 mt-1">Copy and send to friends via WhatsApp, Twitter, or email.</p>
+                          </div>
+                        </div>
+                        <div className="ref-step">
+                          <span className="ref-step-num">2</span>
+                          <div className="text-left">
+                            <strong className="text-gray-900 dark:text-white block font-sans">Friend signs up using your link</strong>
+                            <p className="text-xs text-gray-400 mt-1">They automatically get 10 + 15 = 25 credits to start with.</p>
+                          </div>
+                        </div>
+                        <div className="ref-step">
+                          <span className="ref-step-num">3</span>
+                          <div className="text-left">
+                            <strong className="text-gray-900 dark:text-white block font-sans">You receive 20 credits instantly</strong>
+                            <p className="text-xs text-gray-400 mt-1">Credited to your account the moment they complete registration.</p>
+                          </div>
+                        </div>
+                        <div className="ref-step">
+                          <span className="ref-step-num">4</span>
+                          <div className="text-left">
+                            <strong className="text-gray-900 dark:text-white block font-sans">Earn 30 more when they buy</strong>
+                            <p className="text-xs text-gray-400 mt-1">If your friend purchases any credit pack, you earn an extra 30 credits.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="referral-leaderboard-note">
+                      <span>⚡</span>
+                      <span>Your lifetime referral credits: <strong id="lifetimeReferralCredits" className="font-mono" style={{ color: 'var(--color-accent)' }}>{currentUser.lifetimeReferralCredits || 0}</strong></span>
                     </div>
                   </div>
                 )}
@@ -1042,7 +1214,7 @@ export default function App() {
                                               localStorage.setItem('pdf_current_user_id', u.id);
                                               setCurrentUser(u);
                                               handleNavigate('dashboard');
-                                              alert(`Impersonating user "${u.name}". Accessing client-side workspace logs...`);
+                                              showToast(`Impersonating user "${u.name}". Accessing client-side workspace logs...`, 'info');
                                             }}
                                             className="px-2 py-1 text-[10px] font-bold bg-amber-50 text-amber-700 rounded border border-amber-200"
                                           >
@@ -1175,7 +1347,7 @@ export default function App() {
                         />
                       </div>
                       <button
-                        onClick={() => alert('CMS Configurations updated globally.')}
+                        onClick={() => showToast('CMS Configurations updated globally.', 'success')}
                         className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md transition-all"
                       >
                         Save Configurations
@@ -1848,6 +2020,32 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         initialPlanSelection={upgradeInitialPlan}
       />
+
+      <OnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        onShowUpgrade={() => handleShowUpgrade('pro')}
+      />
+
+      {/* Toast Notifications container */}
+      <div className="toast-container" id="toastContainer">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`toast toast--${toast.type}`}>
+            {toast.message}
+          </div>
+        ))}
+      </div>
+
+      {/* Scroll-to-Top Button */}
+      <button 
+        className="scroll-top-btn" 
+        id="scrollTopBtn" 
+        aria-label="Scroll to top"
+        onClick={handleScrollToTop}
+        style={{ display: showScrollTop ? 'flex' : 'none' }}
+      >
+        ↑
+      </button>
 
       {/* Universal Footer */}
       <footer className="site-footer">

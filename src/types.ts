@@ -13,6 +13,8 @@ export interface User {
   profilePhoto?: string;
   referralCode: string;
   referralsCount: number;
+  credits: number;
+  lifetimeReferralCredits: number;
 }
 
 export interface Tool {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { showToast } from '../utils/toast';
 import { 
   Type, Pencil, Square, Circle, Download, Trash2, Undo2, Redo2, 
   ZoomIn, ZoomOut, Check, RotateCw, Copy, Plus, X, Palette, 
@@ -148,7 +149,7 @@ export default function PdfEditorWorkspace({
         setIsLoading(false);
       } catch (err) {
         console.error('Failed to load PDF editor document', err);
-        alert('Error loading PDF document for editing. Please try another file.');
+        showToast('Error loading PDF document for editing. Please try another file.', 'error');
         onClose();
       }
     };
@@ -455,7 +456,7 @@ export default function PdfEditorWorkspace({
   const handleDeletePage = () => {
     const activeMods = pageModifications.filter(m => !m.isDeleted);
     if (activeMods.length <= 1) {
-      alert('A document must have at least one page. Cannot delete the only remaining page.');
+      showToast('A document must have at least one page. Cannot delete the only remaining page.', 'error');
       return;
     }
 
@@ -737,7 +738,7 @@ export default function PdfEditorWorkspace({
       onSave(compiledBlob, `${file.name.replace('.pdf', '')}_edited.pdf`);
     } catch (err) {
       console.error('Failed to compile edited PDF', err);
-      alert('Error building your edited PDF. Please check your page layouts and try again.');
+      showToast('Error building your edited PDF. Please check your page layouts and try again.', 'error');
     } finally {
       setIsLoading(false);
     }
