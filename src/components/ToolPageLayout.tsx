@@ -9,6 +9,9 @@ import { PDFDocument } from 'pdf-lib';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import PdfEditorWorkspace from './PdfEditorWorkspace';
 import RotateReorderWorkspace from './RotateReorderWorkspace';
+import PasswordWorkspace from './PasswordWorkspace';
+import PageNumbersWorkspace from './PageNumbersWorkspace';
+import AiChatWorkspace from './AiChatWorkspace';
 
 const loadPdfJS = (): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -593,6 +596,14 @@ export default function ToolPageLayout({
     fileInputRef.current?.click();
   };
 
+  if (tool.slug === 'ai-chat') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8" id="tool-page-ai-chat">
+        <AiChatWorkspace onClose={() => onNavigate('')} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 select-none" id={`tool-page-${tool.slug}`}>
       {/* Breadcrumbs */}
@@ -683,6 +694,45 @@ export default function ToolPageLayout({
                 AppStore.logUsage(
                   currentUser.id,
                   'rotate-reorder',
+                  files[0].name,
+                  files[0].size,
+                  'success'
+                );
+              }
+              const url = URL.createObjectURL(editedBlob);
+              setResultFiles([{ name: filename, blob: editedBlob, url, size: editedBlob.size }]);
+              onProcessSuccess();
+            }}
+            loadPdfJS={loadPdfJS}
+          />
+        ) : tool.slug === 'pdf-password' && files.length > 0 ? (
+          <PasswordWorkspace
+            file={files[0]}
+            onClose={resetTool}
+            onSave={(editedBlob, filename) => {
+              if (currentUser) {
+                AppStore.logUsage(
+                  currentUser.id,
+                  'pdf-password',
+                  files[0].name,
+                  files[0].size,
+                  'success'
+                );
+              }
+              const url = URL.createObjectURL(editedBlob);
+              setResultFiles([{ name: filename, blob: editedBlob, url, size: editedBlob.size }]);
+              onProcessSuccess();
+            }}
+          />
+        ) : tool.slug === 'page-numbers' && files.length > 0 ? (
+          <PageNumbersWorkspace
+            file={files[0]}
+            onClose={resetTool}
+            onSave={(editedBlob, filename) => {
+              if (currentUser) {
+                AppStore.logUsage(
+                  currentUser.id,
+                  'page-numbers',
                   files[0].name,
                   files[0].size,
                   'success'

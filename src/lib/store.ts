@@ -166,6 +166,28 @@ const DEFAULT_TOOLS: Tool[] = [
     isEnabled: true,
     freeLimit: 3,
     category: 'PDF'
+  },
+  {
+    id: 'pdf-password',
+    name: 'Protect & Unlock PDF',
+    slug: 'pdf-password',
+    description: 'Encrypt your PDF with a strong password or unlock protected files securely in your browser.',
+    icon: 'Lock',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'page-numbers',
+    name: 'Add Page Numbers',
+    slug: 'page-numbers',
+    description: 'Stamp professional page numbers on every page. Choose position, format, font size, and starting number.',
+    icon: 'Binary',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
   }
 ];
 

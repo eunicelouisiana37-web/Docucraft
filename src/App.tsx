@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import AuthModal from './components/AuthModal';
 import UpgradeModal from './components/UpgradeModal';
 import ToolPageLayout from './components/ToolPageLayout';
+import BatchProcessor from './components/BatchProcessor';
 import { 
   FileText, ArrowRight, Check, Zap, Sparkles, Sliders, Play, Trash2, HelpCircle, ChevronDown, CheckCircle, Search, Info, Settings, ShieldAlert, Edit, UserMinus, ToggleLeft, Activity, RefreshCw, Star, ArrowUpRight, Copy, Share2, Mail, Lock, Trash, ArrowRightLeft, Landmark, Loader2, Upload
 } from 'lucide-react';
@@ -27,6 +28,8 @@ const TOOL_CATEGORIES_MAP: Record<string, 'convert' | 'organize' | 'enhance' | '
   'ai-chat': 'ai',
   'sign-pdf': 'ai',
   'rotate-reorder': 'organize',
+  'pdf-password': 'enhance',
+  'page-numbers': 'enhance',
 };
 
 const TOOL_EMOJIS_MAP: Record<string, string> = {
@@ -45,6 +48,8 @@ const TOOL_EMOJIS_MAP: Record<string, string> = {
   'ai-chat': '🤖',
   'sign-pdf': '🖋️',
   'rotate-reorder': '🔄',
+  'pdf-password': '🔒',
+  'page-numbers': '🔢',
 };
 
 export default function App() {
@@ -428,6 +433,13 @@ export default function App() {
               setFileRecords(AppStore.getFileRecords());
             }}
           />
+        ) : currentPath === 'batch' ? (
+          <BatchProcessor
+            currentUser={currentUser}
+            onShowUpgrade={handleShowUpgrade}
+            onOpenAuth={handleOpenAuth}
+            onNavigate={handleNavigate}
+          />
         ) : currentPath.startsWith('dashboard') ? (
           /* USER DASHBOARD PAGE CONTAINER */
           currentUser ? (
@@ -697,7 +709,7 @@ export default function App() {
                             Invite & Earn!
                           </h3>
                           <p className="text-xs text-gray-400 mt-2">
-                            Invite your friends or team. For every friend who signs up using your code, you both earn an extra +1 daily limit on all 8 tools permanently!
+                            Invite your friends or team. For every friend who signs up using your code, you both earn an extra +1 daily limit on all 11 tools permanently!
                           </p>
                         </div>
                         <button
@@ -1212,6 +1224,40 @@ export default function App() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {(!toolSearch || 'batch processing'.includes(toolSearch.toLowerCase()) || 'apply one operation to multiple pdfs at once'.includes(toolSearch.toLowerCase())) && (
+                <div
+                  onClick={() => handleNavigate('batch')}
+                  className="glass-card glass-card-hover p-6 rounded-3xl cursor-pointer text-left flex flex-col justify-between group"
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="text-[10px] font-bold font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">ENHANCE TOOL</span>
+                      <span style={{ 
+                        background: 'linear-gradient(135deg, #7C3AED, #A78BFA)', 
+                        color: 'white', 
+                        fontSize: '11px', 
+                        padding: '2px 10px', 
+                        borderRadius: 'var(--radius-pill)', 
+                        fontWeight: 700 
+                      }}>
+                        Pro
+                      </span>
+                    </div>
+                    <h3 className="font-sans font-extrabold text-lg text-gray-950 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      Batch Processing
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-2 line-clamp-3 font-body">
+                      Apply one operation to multiple PDFs at once. Compress 10 files, convert 5 PDFs to Word — in one click.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-900/40 pt-4 mt-6">
+                    <span className="text-[10px] text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-950/30 font-bold py-0.5 px-2 rounded-full uppercase tracking-wide">Ready</span>
+                    <ArrowRight size={14} className="text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                  </div>
+                </div>
+              )}
+
               {allTools
                 .filter(t => t.name.toLowerCase().includes(toolSearch.toLowerCase()) || t.description.toLowerCase().includes(toolSearch.toLowerCase()))
                 .map((t) => (
@@ -1539,7 +1585,7 @@ export default function App() {
                   <div className="step-number">02</div>
                   <div className="step-icon">⚙️</div>
                   <h3>Choose Your Tool</h3>
-                  <p>Select from 8 high-performance document tools: merge, compress, convert, sign, OCR, or chat with AI about your PDF.</p>
+                  <p>Select from 11 high-performance document tools: merge, compress, convert, sign, OCR, or chat with AI about your PDF.</p>
                 </div>
                 <div className="step-card">
                   <div className="step-number">03</div>
@@ -1554,7 +1600,7 @@ export default function App() {
             <section className="tools-section" id="tools">
               <div className="section-eyebrow">Everything you need</div>
               <h2 className="section-title">Select Your Utility Tool</h2>
-              <p className="section-subtitle">8 high-performance tools. Unlimited bandwidth. No installs.</p>
+              <p className="section-subtitle">11 high-performance tools. Unlimited bandwidth. No installs.</p>
 
               {/* Search */}
               <div className="tool-search-wrapper">
@@ -1617,6 +1663,38 @@ export default function App() {
 
               {/* Redesigned Tools Grid */}
               <div className="tools-grid-redesign">
+                {(toolCategory === 'all' || toolCategory === 'enhance') && 
+                 (!toolSearch || 'batch processing'.includes(toolSearch.toLowerCase()) || 'apply one operation to multiple pdfs at once'.includes(toolSearch.toLowerCase())) && (
+                  <div 
+                    className="tool-card" 
+                    data-category="enhance" 
+                    data-tool="batch"
+                    onClick={() => handleNavigate('batch')}
+                  >
+                    <div className="tool-card-header">
+                      <span className="tool-category-badge">enhance</span>
+                      <span style={{ 
+                        background: 'linear-gradient(135deg, #7C3AED, #A78BFA)', 
+                        color: 'white', 
+                        fontSize: '11px', 
+                        padding: '2px 10px', 
+                        borderRadius: 'var(--radius-pill)', 
+                        fontWeight: 700 
+                      }}>
+                        Pro
+                      </span>
+                    </div>
+                    <div className="tool-icon-wrapper">
+                      <span style={{ fontSize: '28px' }}>⚡</span>
+                    </div>
+                    <h3 className="tool-name">Batch Processing</h3>
+                    <p className="tool-desc">Apply one operation to multiple PDFs at once. Compress 10 files, convert 5 PDFs to Word — in one click.</p>
+                    <span className="tool-open-link">
+                      Open Tool <span className="tool-arrow">→</span>
+                    </span>
+                  </div>
+                )}
+
                 {allTools
                   .filter((t) => {
                     const category = TOOL_CATEGORIES_MAP[t.slug] || 'convert';
@@ -1630,7 +1708,7 @@ export default function App() {
                     const category = TOOL_CATEGORIES_MAP[t.slug] || 'convert';
                     const emoji = TOOL_EMOJIS_MAP[t.slug] || '📄';
                     const isPopular = t.slug === 'pdf-to-word' || t.slug === 'merge-pdf';
-                    const isNew = t.slug === 'ai-chat' || t.slug === 'sign-pdf';
+                    const isNew = t.slug === 'ai-chat' || t.slug === 'sign-pdf' || t.slug === 'rotate-reorder' || t.slug === 'pdf-password' || t.slug === 'page-numbers';
 
                     if (t.slug === 'ai-chat') {
                       return (
@@ -1706,7 +1784,7 @@ export default function App() {
                     <ul className="plan-features">
                       <li>✓ 3 actions per tool per day</li>
                       <li>✓ Up to 25MB file uploads</li>
-                      <li>✓ All 8 tools accessible</li>
+                      <li>✓ All 11 tools accessible</li>
                       <li>✓ AI Chat PDF (3 queries/day)</li>
                       <li className="feature-limited">✗ No file history</li>
                       <li className="feature-limited">✗ No batch processing</li>
