@@ -121,7 +121,7 @@ export default function Sidebar({
       </aside>
 
       {/* Mobile Bottom Navigation Drawer */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 h-16 flex items-center justify-around px-2 select-none">
+      <nav className="md:hidden mobile-bottom-nav">
         {activeMenu.slice(0, 5).map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -129,14 +129,13 @@ export default function Sidebar({
             <button
               key={item.id}
               onClick={() => onSelectView(item.id)}
-              className={`flex flex-col items-center justify-center py-1.5 px-2.5 rounded-lg transition-all ${
-                isActive 
-                  ? 'text-indigo-600 dark:text-indigo-400 font-semibold' 
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
+              className={`mobile-bottom-nav-item ${isActive ? 'mobile-bottom-nav-item--active' : ''}`}
             >
-              <Icon size={18} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-              <span className="text-[10px] mt-0.5 tracking-tight">{item.name}</span>
+              {isActive && <div className="mobile-bottom-nav-item-indicator" />}
+              <div className="mobile-bottom-nav-item-content">
+                <Icon size={18} className={isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+                <span className="text-[10px] mt-0.5 tracking-tight">{item.name}</span>
+              </div>
             </button>
           );
         })}

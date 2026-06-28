@@ -11,10 +11,51 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+const TOOL_CATEGORIES_MAP: Record<string, 'convert' | 'organize' | 'enhance' | 'ai'> = {
+  'pdf-to-word': 'convert',
+  'word-to-pdf': 'convert',
+  'pdf-to-image': 'convert',
+  'image-to-pdf': 'convert',
+  'image-converter': 'convert',
+  'pdf-to-excel': 'convert',
+  'merge-pdf': 'organize',
+  'split-pdf': 'organize',
+  'compress-pdf': 'enhance',
+  'watermark-pdf': 'enhance',
+  'ocr-pdf': 'enhance',
+  'edit-pdf': 'enhance',
+  'ai-chat': 'ai',
+  'sign-pdf': 'ai',
+  'rotate-reorder': 'organize',
+};
+
+const TOOL_EMOJIS_MAP: Record<string, string> = {
+  'pdf-to-word': '📝',
+  'word-to-pdf': '📄',
+  'pdf-to-image': '🖼️',
+  'image-to-pdf': '📸',
+  'image-converter': '🔄',
+  'pdf-to-excel': '📊',
+  'merge-pdf': '➕',
+  'split-pdf': '✂️',
+  'compress-pdf': '🗜️',
+  'watermark-pdf': '🏷️',
+  'ocr-pdf': '🔍',
+  'edit-pdf': '✍️',
+  'ai-chat': '🤖',
+  'sign-pdf': '🖋️',
+  'rotate-reorder': '🔄',
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentPath, setCurrentPath] = useState<string>(''); // e.g. '', 'tools', 'pricing', 'tools/merge-pdf'
   const [activeDashboardView, setActiveDashboardView] = useState<string>('overview');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isHeroDragging, setIsHeroDragging] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState<boolean>(() => {
+    return localStorage.getItem('announcement-dismissed') !== 'true';
+  });
   
   // Auth & Upgrade modals state
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -36,6 +77,7 @@ export default function App() {
 
   // Search/Filter states
   const [toolSearch, setToolSearch] = useState('');
+  const [toolCategory, setToolCategory] = useState<string>('all');
   const [adminUserSearch, setAdminUserSearch] = useState('');
   const [adminUserFilter, setAdminUserFilter] = useState<string>('all'); // all, pro, business, free, admin
 
@@ -82,6 +124,12 @@ export default function App() {
         const sub = hash.split('/')[1] || 'admin-dashboard';
         setActiveDashboardView(sub);
       }
+
+      if (hash === 'how-it-works') {
+        setTimeout(() => {
+          document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+      }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -99,6 +147,10 @@ export default function App() {
   };
 
   const handleNavigate = (path: string) => {
+    if (path === 'how-it-works') {
+      window.location.hash = '#/how-it-works';
+      return;
+    }
     window.location.hash = `#/${path}`;
   };
 
@@ -268,6 +320,40 @@ export default function App() {
     }
   };
 
+  const handleHeroDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsHeroDragging(true);
+  };
+
+  const handleHeroDragLeave = () => {
+    setIsHeroDragging(false);
+  };
+
+  const handleHeroDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsHeroDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      handleDirectFileRoute(file);
+    }
+  };
+
+  const handleHeroBrowseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    document.getElementById('hero-dropzone-uploader')?.click();
+  };
+
+  const handleDirectFileRoute = (file: File) => {
+    setPendingFile(file);
+    if (file.type === 'application/pdf') {
+      handleNavigate('tools/compress-pdf');
+    } else if (file.type.startsWith('image/')) {
+      handleNavigate('tools/image-converter');
+    } else {
+      handleNavigate('tools/edit-pdf');
+    }
+  };
+
   // Helper: Format Dates nicely
   const formatDate = (isoStr: string) => {
     return new Date(isoStr).toLocaleDateString('en-US', {
@@ -280,7 +366,7 @@ export default function App() {
   };
 
   // Active Tool Routing Checker
-  const activeTool = allTools.find(t => `tools/${t.slug}` === currentPath);
+  const activeTool = allTools.find(t => `tools/${t.slug}` === currentPath || t.slug === currentPath);
 
   // FAQ list for landing & pricing pages
   const faqs = [
@@ -297,6 +383,23 @@ export default function App() {
       {/* Mesh Glass Gradient Background */}
       <div className="mesh-bg"></div>
       
+      {/* Universal Announcement Bar */}
+      {showAnnouncement && (
+        <div className="announcement-bar">
+          🚀 Doculux v4 is now 100% serverless · Your documents never leave your browser
+          <button 
+            className="announcement-close" 
+            aria-label="Dismiss"
+            onClick={() => {
+              localStorage.setItem('announcement-dismissed', 'true');
+              setShowAnnouncement(false);
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Universal Header */}
       <Header
         currentUser={currentUser}
@@ -318,6 +421,8 @@ export default function App() {
             onShowUpgrade={handleShowUpgrade}
             onOpenAuth={handleOpenAuth}
             onNavigate={handleNavigate}
+            initialFile={pendingFile}
+            onClearInitialFile={() => setPendingFile(null)}
             onProcessSuccess={() => {
               setAllLogs(AppStore.getLogs());
               setFileRecords(AppStore.getFileRecords());
@@ -334,6 +439,7 @@ export default function App() {
                 onSelectView={(v) => handleNavigate(`dashboard/${v}`)}
                 onLogout={handleLogout}
                 onNavigateHome={() => handleNavigate('')}
+                isAdminMode={activeDashboardView.startsWith('admin-')}
               />
 
               {/* Central Panel Body */}
@@ -342,53 +448,81 @@ export default function App() {
                 {/* Dashboard View: Overview */}
                 {activeDashboardView === 'overview' && (
                   <div className="space-y-6 animate-fade-in" id="dashboard-overview-panel">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 glass-card p-6 rounded-3xl shadow-sm">
+                    <div className="dashboard-welcome-banner">
                       <div>
-                        <h2 className="font-sans font-extrabold text-2xl text-gray-900 dark:text-white flex items-center gap-2">
+                        <h2 className="welcome-user-name">
                           Welcome Back, {currentUser.name}!
                         </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          You are currently on the <strong className="text-indigo-600 dark:text-indigo-400 capitalize">{currentUser.plan} Plan</strong>.
+                        <p className="welcome-plan-status">
+                          {currentUser.plan === 'free' ? (
+                            <>
+                              You are on the{' '}
+                              <span 
+                                className="welcome-plan-status-accent" 
+                                onClick={() => handleShowUpgrade('pro')}
+                              >
+                                Free Plan
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              You are on the{' '}
+                              <span className="welcome-plan-status-accent" style={{ color: '#10B981' }}>
+                                Pro Plan
+                              </span>
+                            </>
+                          )}
                         </p>
                       </div>
 
                       {currentUser.plan === 'free' ? (
                         <button
                           onClick={() => handleShowUpgrade('pro')}
-                          className="px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm flex items-center gap-1.5 transition-all"
+                          className="plan-cta plan-cta--primary md:max-w-[240px] flex items-center justify-center gap-2"
                         >
-                          <Zap size={14} />
-                          Upgrade to Pro (Unlimited)
+                          <Zap size={16} />
+                          Upgrade to Pro →
                         </button>
                       ) : (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/45 rounded-xl">
-                          <Sparkles size={16} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />
-                          <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wide">Premium Active</span>
+                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400">
+                          <Sparkles size={16} className="animate-pulse" />
+                          <span className="text-xs font-bold uppercase tracking-wide animate-pulse">Premium Active</span>
                         </div>
                       )}
                     </div>
 
                     {/* Usage Progress Cards */}
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {allTools.slice(0, 4).map((t) => {
+                      {allTools.map((t) => {
                         const usage = AppStore.getDailyUsageCount(currentUser.id, t.slug);
                         const limit = t.freeLimit + currentUser.referralsCount;
-                        const percent = currentUser.plan !== 'free' ? 100 : Math.min(100, (usage / limit) * 100);
+                        const isFree = currentUser.plan === 'free';
+                        const atLimit = isFree && usage >= limit;
+                        const percent = !isFree ? 0 : Math.min(100, (usage / limit) * 100);
+
                         return (
-                          <div key={t.slug} className="glass-card p-4 rounded-2xl shadow-sm">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{t.name}</span>
-                              <span className="text-xs font-mono font-bold text-gray-400">
-                                {currentUser.plan !== 'free' ? 'Unlimited' : `${usage}/${limit}`}
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden">
+                          <div key={t.slug} className="usage-card">
+                            <div className="usage-tool-name">{t.name}</div>
+                            <div className="usage-bar-wrapper">
                               <div 
-                                className={`h-full rounded-full transition-all duration-300 ${percent >= 100 && currentUser.plan === 'free' ? 'bg-red-500' : 'bg-indigo-600'}`}
-                                style={{ width: `${percent}%` }}
-                              />
+                                className="usage-bar-fill" 
+                                style={{ 
+                                  width: `${percent}%`,
+                                  backgroundColor: atLimit ? 'var(--color-warning)' : 'var(--color-primary)'
+                                }}
+                              ></div>
                             </div>
-                            <span className="text-[10px] text-gray-400 mt-1 block">Daily usage statistics</span>
+                            <div className="usage-counter">
+                              {atLimit ? (
+                                <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+                                  Limit reached · Upgrade for unlimited
+                                </span>
+                              ) : !isFree ? (
+                                `${usage} / Unlimited today`
+                              ) : (
+                                `${usage} / ${limit} today`
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -430,16 +564,18 @@ export default function App() {
                     </div>
 
                     {fileRecords.length === 0 ? (
-                      <div className="p-12 text-center glass-card rounded-3xl">
-                        <FileText size={48} className="text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">No files processed recently</h3>
-                        <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">Upload a document on any tool to see downloadable files listed here. For maximum safety, files are kept for 1 hour.</p>
-                        <button 
-                          onClick={() => handleNavigate('tools')} 
-                          className="mt-4 px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-md"
+                      <div className="empty-state">
+                        <div className="empty-icon">📂</div>
+                        <h3>No files yet</h3>
+                        <p>Start by processing a document. Your output files will appear here for easy re-download.</p>
+                        <a 
+                          href="#tools" 
+                          onClick={(e) => { e.preventDefault(); handleNavigate('tools'); }} 
+                          className="plan-cta plan-cta--primary" 
+                          style={{ display: 'inline-block', width: 'auto', padding: '12px 24px' }}
                         >
-                          Open Tools Catalog
-                        </button>
+                          Go to Tools
+                        </a>
                       </div>
                     ) : (
                       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,7 +583,7 @@ export default function App() {
                           <div key={rec.id} className="p-4 glass-card rounded-2xl shadow-sm flex flex-col justify-between h-36">
                             <div>
                               <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-sans font-bold text-sm text-gray-950 dark:text-white truncate">{rec.name}</h4>
+                                <h4 className="font-mono font-bold text-sm text-gray-950 dark:text-white truncate">{rec.name}</h4>
                                 <span className="px-1.5 py-0.5 rounded bg-green-50 text-[9px] font-bold text-green-700 capitalize">Success</span>
                               </div>
                               <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase">Tool: {rec.tool.replace('-', ' ')}</p>
@@ -490,7 +626,7 @@ export default function App() {
                                 <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/10">
                                   <td className="p-4 font-mono text-[11px] text-gray-400">{log.date}</td>
                                   <td className="p-4 font-bold text-gray-900 dark:text-white capitalize">{log.tool.replace('-', ' ')}</td>
-                                  <td className="p-4 truncate max-w-[200px] text-gray-600 dark:text-gray-300">{log.fileName}</td>
+                                  <td className="p-4 truncate max-w-[200px] text-gray-600 dark:text-gray-300 font-mono">{log.fileName}</td>
                                   <td className="p-4 font-mono text-xs">{(log.fileSize / (1024 * 1024)).toFixed(2)} MB</td>
                                   <td className="p-4">
                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${log.status === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -1216,196 +1352,404 @@ export default function App() {
         ) : (
           /* HOMEPAGE (/) LANDING PAGE */
           <div className="animate-fade-in" id="landing-home-page">
-            
-            {/* Announcement Banner */}
-            <div className="bg-indigo-600 text-white text-center py-2 px-4 text-xs font-semibold select-none">
-              🚀 Announcement: Doculux v4 is now 100% serverless client-side secured. Your documents never leave your browser!
-            </div>
 
-            {/* Hero area */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 text-center space-y-8 select-none">
-              <div className="space-y-4">
-                <div className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40 py-1 px-3.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Sparkles size={12} className="animate-pulse" />
-                  Browser-Based Processing Engine
+            {/* Redesigned Hero Area */}
+            <div className="relative overflow-hidden" style={{ backgroundColor: 'var(--color-bg)' }}>
+              {/* Glow Orb 1 */}
+              <div 
+                className="absolute pointer-events-none" 
+                style={{
+                  width: '600px',
+                  height: '600px',
+                  background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)',
+                  left: '50%',
+                  top: '0',
+                  transform: 'translateX(-50%)',
+                  zIndex: 0,
+                  pointerEvents: 'none'
+                }}
+              />
+              {/* Glow Orb 2 */}
+              <div 
+                className="absolute pointer-events-none" 
+                style={{
+                  width: '400px',
+                  height: '400px',
+                  background: 'radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%)',
+                  right: '0',
+                  top: '10%',
+                  zIndex: 0,
+                  pointerEvents: 'none'
+                }}
+              />
+
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20 text-center space-y-10 select-none relative z-10">
+                
+                {/* Eyebrow badge */}
+                <div>
+                  <span className="eyebrow-badge">
+                    ✦ Browser-Based Processing Engine
+                  </span>
                 </div>
-                <h1 className="font-display font-extrabold text-4xl sm:text-5.5xl lg:text-6.5xl text-gray-900 dark:text-white tracking-tight leading-[1.05] max-w-3xl mx-auto">
-                  The Premium, Secured <span className="text-indigo-600 dark:text-indigo-400">PDF & Image</span> Suite
+
+                {/* H1 Headline */}
+                <h1 
+                  className="font-display font-extrabold tracking-tight text-text-primary max-w-4xl mx-auto text-center"
+                  style={{ fontSize: 'clamp(36px, 6vw, 72px)', lineHeight: '1.05', letterSpacing: '-0.02em' }}
+                >
+                  The Premium, Secured<br />
+                  <span style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
+                    PDF & Document
+                  </span> Suite
                 </h1>
-                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-lg mx-auto">
-                  Doculux runs fast rendering directly in your browser. No slow cloud uploads, no privacy threats — just robust, instant document modifications.
+
+                {/* Subheadline */}
+                <p className="text-[18px] text-text-secondary max-w-[520px] mx-auto leading-[1.7] text-center">
+                  Edit, convert, compress and sign PDFs instantly. No installs. No uploads to foreign servers. 100% in your browser.
                 </p>
-              </div>
 
-              {/* Instant Hero File Dropper Interactive Demo (WOW FACTOR) */}
-              <div className="max-w-lg mx-auto glass-card p-6 rounded-3xl shadow-xl space-y-4">
-                <div className="text-left mb-2">
-                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Instant Playground Test</span>
-                  <h4 className="font-sans font-bold text-sm text-gray-950 dark:text-white mt-0.5">Test Document Converted Instantly</h4>
-                </div>
-
-                {!landingResultReady ? (
-                  <div 
-                    onClick={() => document.getElementById('hero-test-uploader')?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px] transition-all ${
-                      landingProcessing 
-                        ? 'bg-indigo-50/10 border-indigo-600' 
-                        : 'border-gray-200/50 dark:border-gray-800/50 hover:border-indigo-500'
-                    }`}
-                  >
-                    <input
-                      type="file"
-                      id="hero-test-uploader"
-                      onChange={handleLandingFileSelect}
-                      className="hidden"
-                    />
-                    
-                    {landingProcessing ? (
-                      <div className="space-y-2 w-full max-w-[240px]">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 size={14} className="animate-spin text-indigo-600" />
-                          <span className="text-xs font-semibold">Local Conversion Processing...</span>
-                        </div>
-                        <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${landingProgress}%` }} />
-                        </div>
-                        <span className="text-[9px] font-mono text-gray-400">{landingProgress}% Done</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload size={24} className="text-indigo-600 mb-2" />
-                        <h5 className="font-sans font-bold text-xs">Drag any file to experience the speed!</h5>
-                        <p className="text-[9px] text-gray-400 mt-1">Accepts PDFs or Images. Safe client-side trial.</p>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 border border-green-200 bg-green-50/20 rounded-2xl text-center space-y-3">
-                    <div className="w-10 h-10 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 flex items-center justify-center rounded-full mx-auto">
-                      <CheckCircle size={20} className="stroke-[2.5]" />
-                    </div>
-                    <div className="text-xs">
-                      <p className="font-bold">Conversion trial completed successfully!</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{landingFile?.name} has been processed inside your browser sandbox.</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setLandingFile(null);
-                        setLandingResultReady(false);
-                      }}
-                      className="text-xs text-indigo-600 font-bold hover:underline"
-                    >
-                      Try Another Conversion
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Trust badges stat line */}
-              <div className="flex flex-wrap items-center justify-center gap-6 text-gray-400 font-mono text-xs pt-4">
-                <span>🟢 4.2M+ CONVERSIONS ACTIVE</span>
-                <span>•</span>
-                <span>🟢 100% ENCRYPTED CLIENT ENGINE</span>
-                <span>•</span>
-                <span>🟢 24/7 SLACK UPTIME</span>
-              </div>
-            </div>
-
-            {/* Tools catalog directory grid */}
-            <div className="border-y border-gray-100/40 dark:border-gray-900/40 py-16 select-none">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 text-center">
-                <div className="space-y-2">
-                  <h2 className="font-sans font-extrabold text-2.5xl sm:text-3xl text-gray-900 dark:text-white">
-                    Select Your Utility Tool
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto">
-                    Choose from our 8 high-performance tools and start editing with unlimited bandwidth today.
-                  </p>
-                </div>
-
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {allTools.map((t) => (
-                    <div
-                      key={t.slug}
-                      onClick={() => handleNavigate(`tools/${t.slug}`)}
-                      className="glass-card glass-card-hover cursor-pointer text-left transition-all duration-300 group flex flex-col justify-between min-h-[150px] p-5"
-                    >
-                      <div>
-                        <span className="text-[9px] font-bold font-mono text-indigo-600 uppercase tracking-widest block mb-2">{t.category}</span>
-                        <h4 className="font-sans font-extrabold text-sm text-gray-950 dark:text-white group-hover:text-indigo-600 transition-colors">{t.name}</h4>
-                        <p className="text-[11px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">{t.description}</p>
-                      </div>
-                      <span className="text-[10px] text-indigo-600 font-bold hover:underline inline-flex items-center gap-1 mt-4">
-                        Open tool
-                        <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Comprehensive Pricing details card */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 select-none">
-              <div className="text-center mb-12 space-y-2">
-                <h2 className="font-sans font-extrabold text-2.5xl sm:text-3.5xl text-gray-900 dark:text-white">
-                  Designed for Teams & Individuals
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500 max-w-sm mx-auto">
-                  Simple membership models. No locking contracts, cancellable in one click.
-                </p>
-              </div>
-
-              {/* Double pricing plan toggle shortcut */}
-              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                {/* Pro card */}
-                <div className="glass-card p-6 sm:p-8 rounded-3xl border-2 border-indigo-600/80 shadow-xl text-left flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-sans font-bold text-lg text-indigo-600 flex items-center gap-1">
-                      Pro Premium
-                      <Sparkles size={14} className="animate-pulse" />
-                    </h3>
-                    <div className="my-4">
-                      <span className="text-3xl font-extrabold text-gray-950 dark:text-white">$9.99</span>
-                      <span className="text-xs text-gray-400">/ month</span>
-                    </div>
-                    <ul className="space-y-2.5 text-xs text-gray-600 dark:text-gray-300">
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> Unlimited daily usage</li>
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> Up to 200MB file uploads</li>
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> High-speed processors priority</li>
-                    </ul>
-                  </div>
+                {/* CTA Buttons */}
+                <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
                   <button
-                    onClick={() => handleShowUpgrade('pro')}
-                    className="mt-6 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold text-center animate-pulse"
+                    onClick={() => handleNavigate('tools')}
+                    className="px-7 py-3.5 text-base font-semibold text-white bg-[var(--color-primary)] rounded-full transition-all duration-200 hover:shadow-[0_8px_32px_var(--color-primary-glow)] hover:-translate-y-[1px]"
                   >
-                    Get Pro Access
+                    Start for Free — No Sign-Up
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('tools')}
+                    className="px-7 py-3.5 text-base font-medium text-text-primary bg-transparent border border-border rounded-full transition-all duration-200 hover:border-[var(--color-accent)]"
+                  >
+                    View All Tools →
                   </button>
                 </div>
 
-                {/* Free plan */}
-                <div className="glass-card p-6 sm:p-8 rounded-3xl shadow-sm text-left flex flex-col justify-between">
+                {/* Trust Stats Bar */}
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[13px] text-text-muted font-mono tracking-[0.03em] pt-4 max-w-3xl mx-auto">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[var(--color-success)]" />
+                    4.2M+ Documents Processed
+                  </span>
+                  <span className="text-border/60">•</span>
+                  <span className="flex items-center gap-1.5">
+                    🔒 100% Encrypted Client Engine
+                  </span>
+                  <span className="text-border/60">•</span>
+                  <span className="flex items-center gap-1.5">
+                    ⚡ 24/7 Uptime
+                  </span>
+                </div>
+
+                {/* File Drop Zone (in hero) */}
+                <div 
+                  className={`hero-drop-zone ${isHeroDragging ? 'dragging' : ''}`}
+                  id="heroDropZone"
+                  onDragOver={handleHeroDragOver}
+                  onDragLeave={handleHeroDragLeave}
+                  onDrop={handleHeroDrop}
+                  onClick={handleHeroBrowseClick}
+                >
+                  <input
+                    type="file"
+                    id="hero-dropzone-uploader"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleDirectFileRoute(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <div className="drop-zone-icon">⬆</div>
+                  <p className="drop-zone-primary">Drag any file to experience the speed</p>
+                  <p className="drop-zone-secondary">Accepts PDFs or Images · Max 25MB · Safe client-side processing</p>
+                  <button 
+                    className="drop-zone-browse"
+                    onClick={handleHeroBrowseClick}
+                  >
+                    Browse Files
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Security Trust Bar */}
+            <section className="trust-bar">
+              <div className="trust-bar-inner">
+                {/* Set A */}
+                <div className="trust-item">
+                  <span className="trust-icon">🔒</span>
+                  <span>256-bit Encryption</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">🕐</span>
+                  <span>Files auto-deleted after 1 hour</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">🛡️</span>
+                  <span>Never shared or sold</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">⚡</span>
+                  <span>100% browser-side — no server uploads</span>
+                </div>
+                <div className="trust-divider">·</div>
+
+                {/* Set B (Duplicated for seamless marquee looping on all screen widths) */}
+                <div className="trust-item">
+                  <span className="trust-icon">🔒</span>
+                  <span>256-bit Encryption</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">🕐</span>
+                  <span>Files auto-deleted after 1 hour</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">🛡️</span>
+                  <span>Never shared or sold</span>
+                </div>
+                <div className="trust-divider">·</div>
+                <div className="trust-item">
+                  <span className="trust-icon">⚡</span>
+                  <span>100% browser-side — no server uploads</span>
+                </div>
+                <div className="trust-divider">·</div>
+              </div>
+            </section>
+
+            {/* Redesigned How It Works Section */}
+            <section className="how-it-works" id="how-it-works">
+              <div className="section-eyebrow">Simple by design</div>
+              <h2 className="section-title">How Doculux Works</h2>
+              <p className="section-subtitle">From file to finished in seconds. No account needed to start.</p>
+
+              <div className="steps-grid">
+                <div className="step-card">
+                  <div className="step-number">01</div>
+                  <div className="step-icon">📁</div>
+                  <h3>Upload Your File</h3>
+                  <p>Drag and drop or browse. PDFs, images, and Word docs accepted. Processed entirely in your browser — nothing leaves your device.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">02</div>
+                  <div className="step-icon">⚙️</div>
+                  <h3>Choose Your Tool</h3>
+                  <p>Select from 8 high-performance document tools: merge, compress, convert, sign, OCR, or chat with AI about your PDF.</p>
+                </div>
+                <div className="step-card">
+                  <div className="step-number">03</div>
+                  <div className="step-icon">⬇️</div>
+                  <h3>Download Instantly</h3>
+                  <p>Your processed file downloads immediately. No waiting, no email, no account required on the free plan.</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Redesigned Tools Catalog Section */}
+            <section className="tools-section" id="tools">
+              <div className="section-eyebrow">Everything you need</div>
+              <h2 className="section-title">Select Your Utility Tool</h2>
+              <p className="section-subtitle">8 high-performance tools. Unlimited bandwidth. No installs.</p>
+
+              {/* Search */}
+              <div className="tool-search-wrapper">
+                <span className="tool-search-icon">🔍</span>
+                <input
+                  type="text"
+                  className="tool-search-input"
+                  placeholder="Search tools..."
+                  id="toolSearchInput"
+                  autoComplete="off"
+                  value={toolSearch}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setToolSearch(q);
+                    if (q.trim()) {
+                      setToolCategory('all');
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Category filters */}
+              <div className="tool-filter-tabs" id="toolFilterTabs">
+                <button 
+                  className={`filter-tab ${toolCategory === 'all' ? 'active' : ''}`} 
+                  data-category="all"
+                  onClick={() => setToolCategory('all')}
+                >
+                  All Tools
+                </button>
+                <button 
+                  className={`filter-tab ${toolCategory === 'convert' ? 'active' : ''}`} 
+                  data-category="convert"
+                  onClick={() => setToolCategory('convert')}
+                >
+                  Convert
+                </button>
+                <button 
+                  className={`filter-tab ${toolCategory === 'organize' ? 'active' : ''}`} 
+                  data-category="organize"
+                  onClick={() => setToolCategory('organize')}
+                >
+                  Organize
+                </button>
+                <button 
+                  className={`filter-tab ${toolCategory === 'enhance' ? 'active' : ''}`} 
+                  data-category="enhance"
+                  onClick={() => setToolCategory('enhance')}
+                >
+                  Enhance
+                </button>
+                <button 
+                  className={`filter-tab ${toolCategory === 'ai' ? 'active' : ''}`} 
+                  data-category="ai"
+                  onClick={() => setToolCategory('ai')}
+                >
+                  AI & Sign ✦
+                </button>
+              </div>
+
+              {/* Redesigned Tools Grid */}
+              <div className="tools-grid-redesign">
+                {allTools
+                  .filter((t) => {
+                    const category = TOOL_CATEGORIES_MAP[t.slug] || 'convert';
+                    const matchesCategory = toolCategory === 'all' || category === toolCategory;
+                    const matchesSearch = !toolSearch || 
+                      t.name.toLowerCase().includes(toolSearch.toLowerCase()) || 
+                      t.description.toLowerCase().includes(toolSearch.toLowerCase());
+                    return matchesCategory && matchesSearch;
+                  })
+                  .map((t) => {
+                    const category = TOOL_CATEGORIES_MAP[t.slug] || 'convert';
+                    const emoji = TOOL_EMOJIS_MAP[t.slug] || '📄';
+                    const isPopular = t.slug === 'pdf-to-word' || t.slug === 'merge-pdf';
+                    const isNew = t.slug === 'ai-chat' || t.slug === 'sign-pdf';
+
+                    if (t.slug === 'ai-chat') {
+                      return (
+                        <div 
+                          key={t.slug}
+                          className="tool-card tool-card--featured" 
+                          data-category="ai" 
+                          data-tool="ai-chat"
+                          onClick={() => handleNavigate(`tools/${t.slug}`)}
+                        >
+                          <div className="tool-card-header">
+                            <span className="tool-category-badge" style={{ color: 'var(--color-accent)' }}>AI POWERED</span>
+                            <span className="tool-badge-new">✦ FEATURED</span>
+                          </div>
+                          <div className="tool-featured-content">
+                            <div className="tool-featured-text">
+                              <h3 className="tool-name" style={{ fontSize: '26px' }}>AI Chat PDF</h3>
+                              <p className="tool-desc">Upload any PDF and have a conversation with it. Ask questions, get summaries, extract key clauses — powered by AI. The most powerful tool in your document workflow.</p>
+                              <span className="tool-open-link">
+                                Try AI Chat PDF <span className="tool-arrow">→</span>
+                              </span>
+                            </div>
+                            <div className="tool-featured-visual">
+                              <span style={{ fontSize: '64px', opacity: 0.8 }}>🤖</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div 
+                        key={t.slug}
+                        className="tool-card" 
+                        data-category={category} 
+                        data-tool={t.slug}
+                        onClick={() => handleNavigate(`tools/${t.slug}`)}
+                      >
+                        <div className="tool-card-header">
+                          <span className="tool-category-badge">{category}</span>
+                          {isPopular && <span className="tool-badge-popular">Popular</span>}
+                          {isNew && <span className="tool-badge-new">✦ NEW</span>}
+                        </div>
+                        <div className="tool-icon-wrapper">
+                          <span style={{ fontSize: '28px' }}>{emoji}</span>
+                        </div>
+                        <h3 className="tool-name">{t.name}</h3>
+                        <p className="tool-desc">{t.description}</p>
+                        <span className="tool-open-link">
+                          Open Tool <span className="tool-arrow">→</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </section>
+
+            {/* Redesigned Pricing Section */}
+            <section className="pricing-section" id="pricing">
+              <div className="section-eyebrow">Simple pricing</div>
+              <h2 className="section-title">Designed for Teams & Individuals</h2>
+              <p className="section-subtitle">Simple plans. No locking contracts. Cancel in one click.</p>
+
+              <div className="pricing-grid">
+                {/* Free Plan */}
+                <div className="pricing-card">
                   <div>
-                    <h3 className="font-sans font-bold text-lg text-gray-900 dark:text-white">Free Access</h3>
-                    <div className="my-4">
-                      <span className="text-3xl font-extrabold text-gray-950 dark:text-white">$0</span>
-                      <span className="text-xs text-gray-400">/ forever</span>
+                    <div className="plan-name">Free Access</div>
+                    <div className="plan-price">
+                      <span className="price-amount">$0</span>
+                      <span className="price-period">/ forever</span>
                     </div>
-                    <ul className="space-y-2.5 text-xs text-gray-600 dark:text-gray-300">
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> 3 actions per tool daily</li>
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> Up to 25MB file size limit</li>
-                      <li className="flex items-center gap-2"><Check size={12} className="text-indigo-600" /> Safe local client conversions</li>
+                    <ul className="plan-features">
+                      <li>✓ 3 actions per tool per day</li>
+                      <li>✓ Up to 25MB file uploads</li>
+                      <li>✓ All 8 tools accessible</li>
+                      <li>✓ AI Chat PDF (3 queries/day)</li>
+                      <li className="feature-limited">✗ No file history</li>
+                      <li className="feature-limited">✗ No batch processing</li>
                     </ul>
                   </div>
-                  <button
+                  <button 
                     onClick={() => handleOpenAuth('register')}
-                    className="mt-6 w-full py-3 border border-gray-200/50 dark:border-gray-800/50 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold text-center"
+                    className="plan-cta plan-cta--secondary"
                   >
-                    Start Converting
+                    Get Started Free
                   </button>
                 </div>
+
+                {/* Pro Plan (featured) */}
+                <div className="pricing-card pricing-card--featured">
+                  <div className="plan-popular-badge">⚡ Most Popular</div>
+                  <div>
+                    <div className="plan-name">Pro Premium</div>
+                    <div className="plan-price">
+                      <span className="price-amount">$9.99</span>
+                      <span className="price-period">/ month</span>
+                    </div>
+                    <ul className="plan-features">
+                      <li>✓ Unlimited daily usage</li>
+                      <li>✓ Up to 200MB file uploads</li>
+                      <li>✓ High-speed processor priority</li>
+                      <li>✓ Unlimited AI Chat PDF</li>
+                      <li>✓ File history & My Files</li>
+                      <li>✓ Batch processing (coming soon)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <button 
+                      onClick={() => handleShowUpgrade('pro')}
+                      className="plan-cta plan-cta--primary"
+                    >
+                      Get Pro Access →
+                    </button>
+                    <p className="plan-note">Cancel anytime · Paystack & Stripe accepted</p>
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
         )}
       </main>
@@ -1428,30 +1772,45 @@ export default function App() {
       />
 
       {/* Universal Footer */}
-      <footer className="border-t border-gray-100 dark:border-gray-900 py-8 bg-gray-50/50 dark:bg-gray-950 select-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded bg-indigo-600 text-white text-xs">
-              <FileText size={14} />
+      <footer className="site-footer">
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <div className="footer-logo">
+              <span className="footer-logo-icon">📄</span>
+              <span className="footer-logo-text">Docu<span style={{ color: 'var(--color-primary)' }}>lux</span></span>
             </div>
-            <span className="font-sans font-bold text-sm tracking-tight text-gray-900 dark:text-white">
-              Doculux
-            </span>
+            <p className="footer-tagline">The premium, secured PDF & document suite. Built for speed, privacy, and professionals.</p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            <button onClick={() => handleNavigate('')} className="hover:text-indigo-600">Home</button>
-            <span>•</span>
-            <button onClick={() => handleNavigate('tools')} className="hover:text-indigo-600">Tools Catalog</button>
-            <span>•</span>
-            <button onClick={() => handleNavigate('pricing')} className="hover:text-indigo-600">Pricing Tiers</button>
-            <span>•</span>
-            <a href="mailto:support@doculux.com" className="hover:text-indigo-600">Contact Support</a>
-          </div>
+          <nav className="footer-nav">
+            <div className="footer-nav-col">
+              <h4>Tools</h4>
+              <button onClick={() => handleNavigate('tools')} className="text-left">All Tools</button>
+              <button onClick={() => handleNavigate('tools/merge-pdf')} className="text-left">Merge PDF</button>
+              <button onClick={() => handleNavigate('tools/split-pdf')} className="text-left">Split PDF</button>
+              <button onClick={() => handleNavigate('tools/compress-pdf')} className="text-left">Compress PDF</button>
+              <button onClick={() => handleNavigate('tools/ai-chat')} className="text-left">AI Chat PDF</button>
+            </div>
+            <div className="footer-nav-col">
+              <h4>Product</h4>
+              <button onClick={() => { handleNavigate(''); setTimeout(() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-left">How It Works</button>
+              <button onClick={() => { handleNavigate(''); setTimeout(() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="text-left">Pricing</button>
+              <button className="text-left cursor-not-allowed opacity-50" disabled>Changelog</button>
+              <button className="text-left cursor-not-allowed opacity-50" disabled>API (Coming Soon)</button>
+            </div>
+            <div className="footer-nav-col">
+              <h4>Legal</h4>
+              <button className="text-left cursor-not-allowed opacity-50" disabled>Privacy Policy</button>
+              <button className="text-left cursor-not-allowed opacity-50" disabled>Terms of Service</button>
+              <button className="text-left cursor-not-allowed opacity-50" disabled>Cookie Policy</button>
+              <a href="mailto:support@doculux.com" className="text-left">Contact Support</a>
+            </div>
+          </nav>
+        </div>
 
-          <p className="text-[10px] text-gray-400 font-mono">
-            © 2026 Doculux, Inc. • SSL Encrypted Browser Sandbox
-          </p>
+        <div className="footer-bottom">
+          <p>© 2026 Doculux. All rights reserved. Built with 💜 by <a href="#" style={{ color: 'var(--color-accent)' }}>Emmanuel Eleweke</a> · ZedTech</p>
+          <p className="footer-privacy-note">🔒 Your files are never uploaded to our servers. All processing happens in your browser.</p>
         </div>
       </footer>
     </div>

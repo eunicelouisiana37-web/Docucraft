@@ -100,6 +100,72 @@ const DEFAULT_TOOLS: Tool[] = [
     isEnabled: true,
     freeLimit: 3,
     category: 'PDF'
+  },
+  {
+    id: 'pdf-to-excel',
+    name: 'PDF to Excel',
+    slug: 'pdf-to-excel',
+    description: 'Extract tables and data from PDF documents into editable Excel spreadsheets.',
+    icon: 'FileSpreadsheet',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'watermark-pdf',
+    name: 'Watermark PDF',
+    slug: 'watermark-pdf',
+    description: 'Add image or text watermarks to your PDF pages with custom transparency and position.',
+    icon: 'Stamp',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'ocr-pdf',
+    name: 'OCR PDF',
+    slug: 'ocr-pdf',
+    description: 'Convert scanned PDF documents or images into fully searchable, editable PDF files.',
+    icon: 'ScanText',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'ai-chat',
+    name: 'AI Chat PDF',
+    slug: 'ai-chat',
+    description: 'Upload any PDF and have a conversation with it. Ask questions, get summaries, extract key clauses.',
+    icon: 'MessageSquare',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'sign-pdf',
+    name: 'Sign PDF (E-Sign)',
+    slug: 'sign-pdf',
+    description: 'E-Sign your documents online securely. Create signatures, sign with initials, and track audit trails.',
+    icon: 'Signature',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
+  },
+  {
+    id: 'rotate-reorder',
+    name: 'Rotate & Reorder Pages',
+    slug: 'rotate-reorder',
+    description: 'Drag pages into order, rotate individually, or delete pages. Fast local client-side PDF editing.',
+    icon: 'RotateCw',
+    isPdf: true,
+    isEnabled: true,
+    freeLimit: 3,
+    category: 'PDF'
   }
 ];
 
@@ -178,14 +244,17 @@ export class AppStore {
       };
       this.setLocalStorage('pdf_credentials', credentials);
     } else {
-      // Migration check: ensure edit-pdf is in pdf_tools
+      // Migration check: ensure all DEFAULT_TOOLS are in pdf_tools
       const tools = this.getLocalStorage<Tool[]>('pdf_tools', []);
-      if (tools.length > 0 && !tools.some(t => t.slug === 'edit-pdf')) {
-        const editPdfTool = DEFAULT_TOOLS.find(t => t.slug === 'edit-pdf');
-        if (editPdfTool) {
-          tools.push(editPdfTool);
-          this.setLocalStorage('pdf_tools', tools);
+      let updated = false;
+      DEFAULT_TOOLS.forEach(defaultTool => {
+        if (!tools.some(t => t.slug === defaultTool.slug)) {
+          tools.push(defaultTool);
+          updated = true;
         }
+      });
+      if (updated) {
+        this.setLocalStorage('pdf_tools', tools);
       }
     }
   }

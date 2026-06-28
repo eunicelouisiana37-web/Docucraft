@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { PDFDocument } from 'pdf-lib';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import PdfEditorWorkspace from './PdfEditorWorkspace';
+import RotateReorderWorkspace from './RotateReorderWorkspace';
 
 const loadPdfJS = (): Promise<any> => {
   return new Promise((resolve, reject) => {
@@ -34,6 +35,8 @@ interface ToolPageLayoutProps {
   onOpenAuth: (tab?: 'login' | 'register') => void;
   onNavigate: (path: string) => void;
   onProcessSuccess: () => void;
+  initialFile?: File | null;
+  onClearInitialFile?: () => void;
 }
 
 export default function ToolPageLayout({
@@ -42,9 +45,20 @@ export default function ToolPageLayout({
   onShowUpgrade,
   onOpenAuth,
   onNavigate,
-  onProcessSuccess
+  onProcessSuccess,
+  initialFile,
+  onClearInitialFile
 }: ToolPageLayoutProps) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<File[]>(() => {
+    return initialFile ? [initialFile] : [];
+  });
+
+  React.useEffect(() => {
+    if (initialFile) {
+      setFiles([initialFile]);
+      onClearInitialFile?.();
+    }
+  }, [initialFile, onClearInitialFile]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -633,8 +647,8 @@ export default function ToolPageLayout({
 
       {/* Error Message */}
       {errorMessage && (
-        <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs flex items-center gap-2.5">
-          <ShieldAlert size={16} className="shrink-0" />
+        <div className="mb-6 premium-error-alert">
+          <ShieldAlert size={16} className="shrink-0 text-red-600 dark:text-red-400" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -649,6 +663,26 @@ export default function ToolPageLayout({
                 AppStore.logUsage(
                   currentUser.id,
                   'edit-pdf',
+                  files[0].name,
+                  files[0].size,
+                  'success'
+                );
+              }
+              const url = URL.createObjectURL(editedBlob);
+              setResultFiles([{ name: filename, blob: editedBlob, url, size: editedBlob.size }]);
+              onProcessSuccess();
+            }}
+            loadPdfJS={loadPdfJS}
+          />
+        ) : tool.slug === 'rotate-reorder' && files.length > 0 ? (
+          <RotateReorderWorkspace
+            file={files[0]}
+            onClose={resetTool}
+            onSave={(editedBlob, filename) => {
+              if (currentUser) {
+                AppStore.logUsage(
+                  currentUser.id,
+                  'rotate-reorder',
                   files[0].name,
                   files[0].size,
                   'success'
@@ -731,7 +765,7 @@ export default function ToolPageLayout({
                       <div className="flex items-center gap-3 truncate min-w-0">
                         <FileText size={20} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
                         <div className="truncate text-left">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate font-mono">{file.name}</p>
                           <p className="text-[10px] font-mono text-gray-400">
                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                           </p>
@@ -771,10 +805,20 @@ export default function ToolPageLayout({
 
                 {/* Processing and Status indicators */}
                 {isProcessing && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-900 rounded-2xl text-center space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="text-indigo-600 dark:text-indigo-400 animate-spin" />
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Processing file(s)...</span>
+                  <div className="p-6 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-900 rounded-2xl text-center space-y-4 animate-fade-in">
+                    <div className="processing-steps">
+                      <div className={`proc-step ${progress > 35 ? 'proc-step--completed' : progress > 0 ? 'proc-step--active' : ''}`}>
+                        <span className="proc-dot"></span>
+                        <span className="proc-label">Uploading file</span>
+                      </div>
+                      <div className={`proc-step ${progress === 100 ? 'proc-step--completed' : progress > 35 ? 'proc-step--active' : ''}`}>
+                        <span className="proc-dot"></span>
+                        <span className="proc-label">Processing</span>
+                      </div>
+                      <div className={`proc-step ${progress === 100 ? 'proc-step--active' : ''}`}>
+                        <span className="proc-dot"></span>
+                        <span className="proc-label">Ready to download</span>
+                      </div>
                     </div>
                     <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
                       <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${progress}%` }} />
@@ -1008,7 +1052,7 @@ export default function ToolPageLayout({
                 <div className="flex items-center gap-3 truncate min-w-0">
                   <FileText size={20} className="text-green-600 dark:text-green-400 shrink-0" />
                   <div className="truncate text-left">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{resFile.name}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate font-mono">{resFile.name}</p>
                     <p className="text-[10px] font-mono text-gray-400">
                       {(resFile.size / (1024 * 1024)).toFixed(2)} MB
                     </p>

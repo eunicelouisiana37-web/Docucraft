@@ -22,7 +22,7 @@ export default function AuthModal({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -30,7 +30,7 @@ export default function AuthModal({
 
   React.useEffect(() => {
     setTab(initialTab);
-    setError('');
+    setFieldErrors({});
     setSuccess('');
   }, [initialTab, isOpen]);
 
@@ -51,17 +51,21 @@ export default function AuthModal({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
     setSuccess('');
 
     if (isLockedOut()) {
       const remaining = getRemainingLockoutTime();
-      setError(`Too many failed attempts. Try again in ${remaining} seconds.`);
+      setFieldErrors({ password: `Too many failed attempts. Try again in ${remaining} seconds.` });
       return;
     }
 
-    if (!email || !password) {
-      setError('Please fill in all fields.');
+    if (!email) {
+      setFieldErrors(prev => ({ ...prev, email: 'Email is required' }));
+      return;
+    }
+    if (!password) {
+      setFieldErrors(prev => ({ ...prev, password: 'Password is required' }));
       return;
     }
 
@@ -84,9 +88,9 @@ export default function AuthModal({
         if (nextAttempts >= 5) {
           const lockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins
           setLockoutTime(lockedUntil);
-          setError('Too many failed attempts. Security lock activated (15 mins).');
+          setFieldErrors({ password: 'Too many failed attempts. Security lock activated (15 mins).' });
         } else {
-          setError(`Invalid email or password. ${5 - nextAttempts} attempts remaining.`);
+          setFieldErrors({ password: `Invalid email or password. ${5 - nextAttempts} attempts remaining.` });
         }
       }
     }, 1000);
@@ -94,16 +98,30 @@ export default function AuthModal({
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
     setSuccess('');
 
-    if (!name || !email || !password) {
-      setError('All fields are required.');
-      return;
+    let hasErrors = false;
+    const errors: { name?: string; email?: string; password?: string } = {};
+
+    if (!name) {
+      errors.name = 'Full name is required.';
+      hasErrors = true;
+    }
+    if (!email) {
+      errors.email = 'Email address is required.';
+      hasErrors = true;
+    }
+    if (!password) {
+      errors.password = 'Password is required.';
+      hasErrors = true;
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+      hasErrors = true;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (hasErrors) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -120,18 +138,18 @@ export default function AuthModal({
         }, 1500);
       } catch (err: any) {
         setIsLoading(false);
-        setError(err.message || 'Registration failed');
+        setFieldErrors({ email: err.message || 'Registration failed' });
       }
     }, 1200);
   };
 
   const handleForgot = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
     setSuccess('');
 
     if (!email) {
-      setError('Please enter your email address.');
+      setFieldErrors({ email: 'Please enter your email address.' });
       return;
     }
 
@@ -173,7 +191,7 @@ export default function AuthModal({
         {tab !== 'forgot' && (
           <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl mb-6 select-none">
             <button
-              onClick={() => { setTab('login'); setError(''); }}
+              onClick={() => { setTab('login'); setFieldErrors({}); }}
               className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 tab === 'login' 
                   ? 'bg-white dark:bg-gray-800 text-gray-950 dark:text-white shadow-sm' 
@@ -185,7 +203,7 @@ export default function AuthModal({
               Sign In
             </button>
             <button
-              onClick={() => { setTab('register'); setError(''); }}
+              onClick={() => { setTab('register'); setFieldErrors({}); }}
               className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 tab === 'register' 
                   ? 'bg-white dark:bg-gray-800 text-gray-950 dark:text-white shadow-sm' 
@@ -200,12 +218,6 @@ export default function AuthModal({
         )}
 
         {/* Error/Success Alerts */}
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/25 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-            <ShieldAlert size={14} className="shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
         {success && (
           <div className="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-950/25 border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium">
             {success}
@@ -223,8 +235,13 @@ export default function AuthModal({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.email ? 'input-field-error' : ''}`}
               />
+              {fieldErrors.email && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.email}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex justify-between items-center mb-1.5">
@@ -244,7 +261,7 @@ export default function AuthModal({
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.password ? 'input-field-error' : ''}`}
                 />
                 <button
                   type="button"
@@ -254,6 +271,11 @@ export default function AuthModal({
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.password}
+                </div>
+              )}
             </div>
 
             {/* Remember Me */}
@@ -305,8 +327,13 @@ export default function AuthModal({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Doe"
                 required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.name ? 'input-field-error' : ''}`}
               />
+              {fieldErrors.name && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.name}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Email Address</label>
@@ -316,8 +343,13 @@ export default function AuthModal({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.email ? 'input-field-error' : ''}`}
               />
+              {fieldErrors.email && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.email}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Password</label>
@@ -328,7 +360,7 @@ export default function AuthModal({
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                   required
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.password ? 'input-field-error' : ''}`}
                 />
                 <button
                   type="button"
@@ -338,6 +370,11 @@ export default function AuthModal({
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.password}
+                </div>
+              )}
             </div>
 
             <button
@@ -362,8 +399,13 @@ export default function AuthModal({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${fieldErrors.email ? 'input-field-error' : ''}`}
               />
+              {fieldErrors.email && (
+                <div style={{ color: 'var(--color-error)', fontSize: '13px', marginTop: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠</span> {fieldErrors.email}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between items-center text-xs">

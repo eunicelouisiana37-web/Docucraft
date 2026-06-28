@@ -1,8 +1,7 @@
 import React from 'react';
 import { User } from '../types';
-import { AppStore } from '../lib/store';
 import { 
-  FileText, Sun, Moon, LogIn, User as UserIcon, LayoutDashboard, LogOut, Shield, Menu, X, Zap 
+  Menu, X, LogIn, LogOut, Shield, LayoutDashboard, Sun, Moon, Sparkles 
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -14,6 +13,16 @@ interface HeaderProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
 }
+
+const LogoIcon = () => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary shrink-0">
+    <path d="M6 4C6 2.89543 6.89543 2 8 2H20L26 8V28C26 29.1046 25.1046 30 24 30H8C6.89543 30 6 29.1046 6 28V4Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 2V8H26" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M11 14H21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M11 19H21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M11 24H17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+  </svg>
+);
 
 export default function Header({
   currentUser,
@@ -28,6 +37,7 @@ export default function Header({
 
   const navItems = [
     { name: 'Tools', path: 'tools' },
+    { name: 'How It Works', path: 'how-it-works' },
     { name: 'Pricing', path: 'pricing' },
   ];
 
@@ -37,32 +47,31 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo */}
+    <header className="sticky top-0 z-50 w-full h-16 bg-surface/90 backdrop-blur-[12px] border-b border-border transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
+        
+        {/* Logo Section */}
         <div 
           onClick={() => handleNav('')} 
-          className="flex items-center gap-2 cursor-pointer group"
+          className="flex items-center gap-2.5 cursor-pointer group"
           id="nav-logo"
         >
-          <div className="p-2 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white transition-transform group-hover:scale-105">
-            <FileText size={20} className="stroke-[2.5]" />
-          </div>
-          <span className="font-sans font-bold text-lg tracking-tight text-gray-900 dark:text-white">
-            Docu<span className="text-indigo-600 dark:text-indigo-400">lux</span>
+          <LogoIcon />
+          <span className="font-display font-bold text-[22px] leading-none tracking-tight text-text-primary">
+            Docu<span className="text-primary">lux</span>
           </span>
         </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-8">
           {navItems.map((item) => (
             <button
               key={item.path}
               onClick={() => handleNav(item.path)}
-              className={`font-sans text-sm font-medium transition-colors ${
+              className={`text-[15px] transition-colors duration-150 font-medium ${
                 currentPath === item.path 
-                  ? 'text-indigo-600 dark:text-indigo-400' 
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  ? 'text-primary' 
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               {item.name}
@@ -70,12 +79,12 @@ export default function Header({
           ))}
         </nav>
 
-        {/* Action Controls */}
+        {/* Desktop CTA Action Controls */}
         <div className="hidden md:flex items-center gap-4">
-          {/* Theme Toggle */}
+          {/* Theme Toggle Button */}
           <button
             onClick={onToggleTheme}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 transition-colors"
+            className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
             title="Toggle theme"
             id="theme-toggle-btn"
           >
@@ -83,11 +92,11 @@ export default function Header({
           </button>
 
           {currentUser ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {currentUser.role === 'admin' && (
                 <button
                   onClick={() => handleNav('admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 transition-all hover:shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full text-amber-500 bg-amber-500/10 border border-amber-500/20 transition-all hover:bg-amber-500/20"
                   id="header-admin-portal-btn"
                 >
                   <Shield size={14} />
@@ -97,22 +106,22 @@ export default function Header({
 
               <button
                 onClick={() => handleNav('dashboard')}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 hover:bg-indigo-100/50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
                 id="header-dashboard-btn"
               >
                 <LayoutDashboard size={16} />
                 Dashboard
               </button>
 
-              <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
+              <div className="h-6 w-px bg-border" />
 
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm select-none shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm select-none shadow-md">
                   {currentUser.name[0].toUpperCase()}
                 </div>
                 <button
                   onClick={onLogout}
-                  className="p-2 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors"
+                  className="p-2 rounded-lg text-text-secondary hover:bg-red-500/10 hover:text-red-500 transition-colors"
                   title="Sign out"
                   id="header-logout-btn"
                 >
@@ -121,86 +130,111 @@ export default function Header({
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Sign In (ghost) */}
               <button
                 onClick={() => onOpenAuth('login')}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
+                className="px-[18px] py-[8px] text-[15px] font-medium text-text-secondary hover:text-text-primary border border-border bg-transparent rounded-full hover:border-primary transition-all duration-150"
                 id="header-login-btn"
               >
-                <LogIn size={16} />
                 Sign In
               </button>
+              {/* Try Free (filled) */}
               <button
                 onClick={() => onOpenAuth('register')}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm transition-all hover:shadow-md"
+                className="px-[20px] py-[8px] text-[15px] font-semibold rounded-full bg-primary text-white hover:bg-primary-dark hover:shadow-[0_0_20px_var(--color-primary-glow)] transition-all duration-150"
                 id="header-register-btn"
               >
-                <Zap size={15} />
-                Get Started
+                Try Free
               </button>
             </div>
           )}
         </div>
 
-        {/* Mobile menu trigger */}
+        {/* Mobile menu trigger and quick theme switcher */}
         <div className="flex items-center gap-2 md:hidden">
           <button
             onClick={onToggleTheme}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 transition-colors"
+            className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 transition-colors"
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 transition-colors"
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 transition-colors"
+            aria-label="Open Menu"
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            <Menu size={22} />
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Full Screen Overlay Menu Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 space-y-3 transition-colors duration-200">
-          <div className="space-y-1">
+        <div className="fixed inset-0 z-50 bg-surface flex flex-col p-6 animate-fade-in md:hidden">
+          {/* Header Row inside overlay */}
+          <div className="flex items-center justify-between h-10 mb-8">
+            <div className="flex items-center gap-2.5">
+              <LogoIcon />
+              <span className="font-display font-bold text-[22px] leading-none tracking-tight text-text-primary">
+                Docu<span className="text-primary">lux</span>
+              </span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2 rounded-lg text-text-secondary hover:bg-surface-2 transition-colors"
+              aria-label="Close Menu"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Nav links stack */}
+          <nav className="flex flex-col gap-6 text-center my-auto">
             {navItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleNav(item.path)}
-                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900 transition-colors"
+                className={`text-2xl font-display font-semibold transition-colors ${
+                  currentPath === item.path 
+                    ? 'text-primary' 
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
               >
                 {item.name}
               </button>
             ))}
-          </div>
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-900 space-y-2">
+          </nav>
+
+          {/* CTA & Actions stack */}
+          <div className="mt-auto space-y-4 pt-8 border-t border-border">
             {currentUser ? (
-              <>
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+              <div className="space-y-4 text-center">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base shadow-md">
                     {currentUser.name[0].toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser.email}</p>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-text-primary">{currentUser.name}</p>
+                    <p className="text-xs text-text-muted">{currentUser.email}</p>
                   </div>
                 </div>
 
                 {currentUser.role === 'admin' && (
                   <button
                     onClick={() => handleNav('admin')}
-                    className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/20"
+                    className="flex w-full items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-amber-500 bg-amber-500/10 border border-amber-500/20"
                   >
-                    <Shield size={18} />
+                    <Shield size={16} />
                     Admin Portal
                   </button>
                 )}
 
                 <button
                   onClick={() => handleNav('dashboard')}
-                  className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-950/20"
+                  className="flex w-full items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-primary bg-primary/10 border border-primary/20"
                 >
-                  <LayoutDashboard size={18} />
+                  <LayoutDashboard size={16} />
                   Dashboard
                 </button>
 
@@ -209,20 +243,20 @@ export default function Header({
                     onLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                  className="flex w-full items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} />
                   Sign Out
                 </button>
-              </>
+              </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 px-2 py-1">
+              <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
                     onOpenAuth('login');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full py-2.5 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800 rounded-lg"
+                  className="w-full py-3 text-center text-[16px] font-medium text-text-secondary hover:text-text-primary border border-border bg-transparent rounded-full hover:border-primary transition-all duration-150"
                 >
                   Sign In
                 </button>
@@ -231,9 +265,9 @@ export default function Header({
                     onOpenAuth('register');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full py-2.5 text-center text-sm font-medium bg-indigo-600 text-white rounded-lg"
+                  className="w-full py-3 text-center text-[16px] font-semibold rounded-full bg-primary text-white hover:bg-primary-dark hover:shadow-[0_0_20px_var(--color-primary-glow)] transition-all duration-150"
                 >
-                  Get Started
+                  Try Free
                 </button>
               </div>
             )}
